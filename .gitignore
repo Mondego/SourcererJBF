@@ -1,0 +1,8 @@
+*.json
+*.log
+save_*
+builds/*
+TBUILD/*
+Uncompress*
+jars/*
+*.pyc
