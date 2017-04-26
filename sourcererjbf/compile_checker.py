@@ -53,19 +53,26 @@ def build_as_is(project, threadid, output):
 def Analyze(output):
   return output_analyzer.Categorize(output)
 
-def Compile(threadid):
+def Compile(threadid, generated_build):
   try:
     srcdir = TEMPDIR.format(threadid)
     findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
     if findjava == "":
       return False, [{"error_type": "No Java Files"}], "", ""
-    findbuild = check_output(["find", srcdir, "-name", "build.xml"], timeout = TIMEOUT_SECONDS).split()
-    if findbuild != []:
+    if not generated_build:
+      findbuild = check_output(["find", srcdir, "-name", "build.xml"], timeout = TIMEOUT_SECONDS).split()
+      if findbuild != []:
+        try:
+          findbuild = findbuild[0]
+          command = " ".join(["ant", "-f", findbuild.strip()[len(srcdir):], "compile"])
+          #print findbuild.strip()
+          return True, check_output(["ant", "-f", findbuild.strip(), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS), command, ""
+        except CalledProcessError, e:
+          return False, Analyze(e.output), command, e.output
+    else:
       try:
-        findbuild = findbuild[0]
-        command = " ".join(["ant", "-f", findbuild.strip()[len(srcdir):], "compile"])
-        #print findbuild.strip()
-        return True, check_output(["ant", "-f", findbuild.strip(), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS), command, ""
+        command = "ant -f build.xml compile"
+        return True, check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS), command, ""
       except CalledProcessError, e:
         return False, Analyze(e.output), command, e.output
     return False, [{"error_type": "No Build File"}], "", ""
@@ -149,7 +156,7 @@ def TryCompile(trynumber, project, methods, threadid, output):
           # LOG: 
 
           ivyfile, buildfile = MakeBuild(project, threadid)
-        succ, output, command, full_output = Compile(threadid)
+        succ, output, command, full_output = Compile(threadid, project["create_build"])
         project["full_output"] = full_output
         if succ:
           if not project["create_build"]:
