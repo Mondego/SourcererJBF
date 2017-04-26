@@ -13,6 +13,7 @@ if __name__ == "__main__":
   parser.add_argument('-j', '--jars', default="jars", type=str, help ='The root of the java repository')
   parser.add_argument('-ftj', '--fqn_to_jar', default="fqn-to-jars.json", type=str, help ='The file that represents the mapping of fqn to jar in repository.')
   parser.add_argument('-t', '--threads', default=10, type=int, help ='The number of base threads to be run.')
+  parser.add_argument('-tpb', '--try_project_build', action='store_true', help ='Use project build files first if it exists.')
   args = parser.parse_args()
   root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
   cc.JAR_REPO = args.jars
@@ -29,7 +30,7 @@ if __name__ == "__main__":
       projects.append(item)
   cc.make_dir(outdir, keep_old = True)
   if args.rebuild_from_scratch:
-    methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps]
+    methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps]
     open(outfile, "w").write(json.dumps(
         cc.main(root, projects, outdir, methods),
         sort_keys=True,
