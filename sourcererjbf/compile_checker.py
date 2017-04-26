@@ -16,7 +16,7 @@ TEMPDIR = "TBUILD/BUILD_{0}/"
 THREADCOUNT = 50
 TIMEOUT_SECONDS = 1800
 PATH_logs = "logs"
-
+JAR_REPO = ""
 ignore_projects = set()
 
 # Causes infinite loop
@@ -119,7 +119,7 @@ def MakeBuild(project, threadid):
     mavendepends = set([d for d in depends if d[3]])
     mavenline = "\n  ".join([d[4] for d in mavendepends])
     jardepends = depends - mavendepends
-    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", d[4])) for d in jardepends])
+    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4])) for d in jardepends])
     if jarline or mavenline:
       if mavenline:
         classpath += "\n      <classpath refid=\"default.classpath\" />"
@@ -128,7 +128,7 @@ def MakeBuild(project, threadid):
 
   desc = project["description"] if "description" in project else ""
   ivyfile = open("xml-templates/ivy-template.xml", "r").read().format(project["name"]  if "name" in project else "compile_checker_build", mavenline)
-  buildfile = open("xml-templates/build-template.xml", "r").read().format(project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}", project["encoding"] if "encoding" in project else "utf8")
+  buildfile = open("xml-templates/build-template.xml", "r").read().format(project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}", project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"))
   srcdir = TEMPDIR.format(threadid)
   open(os.path.join(srcdir, "ivy.xml"), "w").write(ivyfile)
   open(os.path.join(srcdir, "build.xml"), "w").write(buildfile)
@@ -335,7 +335,7 @@ def getProjects(root, infile):
     return [{"file": line[:-4], "path": os.path.join(root, line)} for line in open(infile).read().split("\n") if line]
 
 if __name__ == "__main__":
-  global THREADCOUNT
+  global THREADCOUNT, JAR_REPO
   parser = argparse.ArgumentParser()
   parser.add_argument('-r', '--root', type=str, help ='The directory under which all the java projects to be compiled exist.')
   parser.add_argument('-f', '--file', type=str, default= "AUTOGEN", help ='The file with project paths to be build. Paths in file are considered relative to the root directory.')
@@ -347,6 +347,7 @@ if __name__ == "__main__":
   args = parser.parse_args()
   root, infile, outdir, outfile, THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
   dependency_matcher.load_fqns(args.jars, args.fqn_to_jar)
+  JAR_REPO = args.jars
   if not os.path.exists("TBUILD"):
     os.makedirs("TBUILD")
   projects = getProjects(root, infile)

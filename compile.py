@@ -15,7 +15,7 @@ if __name__ == "__main__":
   parser.add_argument('-t', '--threads', default=10, type=int, help ='The number of base threads to be run.')
   args = parser.parse_args()
   root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
-  
+  cc.JAR_REPO = args.jars
   if args.rebuild_from_scratch:
     dm.load_fqns(args.jars, args.fqn_to_jar, args.threads)
   if not os.path.exists("TBUILD"):

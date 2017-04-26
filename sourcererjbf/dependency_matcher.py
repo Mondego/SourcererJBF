@@ -64,4 +64,4 @@ def copy_and_retrieve_path(depend_path):
   #existing_file_count = len(KNOWN_JARS.setdefault(filename, []))
   #copy_path = copy_file(depend_path, filename, existing_file_count)
   #KNOWN_JARS[filename].append((depend_path, copy_path))
-  return os.path.join("../..", depend_path)
+  return depend_path
