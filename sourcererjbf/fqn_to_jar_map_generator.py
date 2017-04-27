@@ -31,7 +31,7 @@ def invert(jar_to_fqn):
   return fqn_to_jar
 
 def shortened(path):
-    if path.startwith(ROOT):
+    if path.startswith(ROOT):
         return path[len(ROOT):]
     return path
 
