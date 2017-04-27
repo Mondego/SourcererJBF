@@ -30,6 +30,11 @@ def invert(jar_to_fqn):
       fqn_to_jar.setdefault(fqn, []).append(jar)
   return fqn_to_jar
 
+def shortened(path):
+    if path.startwith(ROOT):
+        return path[len(ROOT):]
+    return path
+
 def make_fqn_part(locations, threadid):
   logger.info("Starting thread " + str(threadid))
   jar_to_fqn_part = {}
@@ -50,10 +55,10 @@ def make_fqn_part(locations, threadid):
     try:
       for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
         if line.endswith(".class"):
-          jar_to_fqn_part.setdefault(path, set()).update(
+          jar_to_fqn_part.setdefault(shortened(path), set()).update(
               get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." or p != "."]))
-      jar_to_fqn_part.setdefault(path, set())
-      shelveobj[path] = jar_to_fqn_part[path]
+      jar_to_fqn_part.setdefault(shortened(path), set())
+      shelveobj[shortened(path)] = jar_to_fqn_part[shortened(path)]
       shelveobj.sync()
 
     except CalledProcessError, e:
