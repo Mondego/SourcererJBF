@@ -35,12 +35,22 @@ def make_fqn_part(locations, threadid):
   count = 0
   total = len(locations)
   shelveobj = shelve.open("save_" + str(threadid))
+  badjarsshelve = shelve.open("badjars_" + str(threadid))
   for path in locations:
+    bad = False
+    try:
+      check_output(["jarsigner", "-verify", path])
+    except CalledProcessError, e:
+      bad = "java.lang.SecurityException" in e.output
+    if bad:
+      badjarsshelve[path] = True
+      badjarsshelve.sync()
+      continue
     try:
       for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
         if line.endswith(".class"):
           jar_to_fqn_part.setdefault(path, set()).update(
-              get_all_variations(line[:-6].split("$")[0].split("/")))
+              get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." or p != "."]))
       jar_to_fqn_part.setdefault(path, set())
       shelveobj[path] = jar_to_fqn_part[path]
       shelveobj.sync()
@@ -55,11 +65,15 @@ def make_fqn_part(locations, threadid):
 
 def reducequeue():
   jar_to_fqn = {}
+  bad_jars = set()
   for i in range(NUMBER_OF_THREADS):
     print i
     part = dict(shelve.open("save_" + str(i)))
     for item in part:
       jar_to_fqn.setdefault(item, set()).update(part[item])
+    badpart = dict(shelve.open("badjars_" + str(i)))
+    bad_jars.update(set(badpart.keys()))
+  open("badjars.txt", "w").write("\n".join(bad_jars) + "\n")
   return jar_to_fqn
 
 def make_fqn_map(jar_locations, tc):

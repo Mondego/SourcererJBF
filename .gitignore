@@ -7,3 +7,7 @@ Uncompress*
 jars/*
 *.pyc
 projects/*
+.vs/*
+*.sln
+*.pyproj
+badjars*
