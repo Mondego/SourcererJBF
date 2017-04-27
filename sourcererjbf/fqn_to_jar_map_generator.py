@@ -3,7 +3,7 @@
 #Takes a folder as input, looks at all subfolders, finds jar files 
 #and figures out FQNs that exist in them
 #
-# Usage: ./fqn_to_jar_map_generator.py <path_to_root_directory_to_search> <file_to_save_map>
+# Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map> <root>
 
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
@@ -12,13 +12,14 @@ from utils import create_logger
 
 NUMBER_OF_THREADS = 20
 logger = create_logger("fqn_to_jar")
+ROOT = ""
 
 def read_jar_locations(jaroutput):
   return open(jaroutput).read().split("\n")
 
 def get_all_variations(fqn_parts):
   fqns = set([fqn_parts[0]])
-  for i in range(1, len(fqn_parts)):
+  for i in range(1, len(fqn_parts) + 1):
     fqns.add(".".join(fqn_parts[:i]))
   return fqns
 
@@ -109,10 +110,12 @@ def get_locations_from_folder(location):
     print "Error when trying to find jars in folder", location
 
 if __name__ == "__main__":
+  global ROOT
   if len(sys.argv) < 3:
-    print "Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map>"
+    print "Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map> [<root>]"
     sys.exit(0)
-
+  if len(sys.argv) == 4:
+      ROOT = sys.argv[3]
   search_and_save(read_jar_locations(sys.argv[1]), sys.argv[2], NUMBER_OF_THREADS)
 
 
