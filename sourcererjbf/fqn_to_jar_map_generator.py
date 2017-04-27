@@ -63,6 +63,8 @@ def make_fqn_part(locations, threadid):
 
     except CalledProcessError, e:
       logger.error(path + "error" + str(e))
+      badjarsshelve[path] = True
+      badjarsshelve.sync()
     except Exception, e:
       logger.error(path + "error" + str(e))
     count+=1
