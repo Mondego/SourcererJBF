@@ -11,10 +11,9 @@ from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, 
 
 import output_analyzer, encode_fixer, dependency_matcher
 
-PARTMAP = "TBUILD/project_compile_temp{0}.shelve"
-TEMPDIR = "TBUILD/BUILD_{0}/"
+from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
+
 THREADCOUNT = 50
-TIMEOUT_SECONDS = 1800
 PATH_logs = "logs"
 JAR_REPO = ""
 ignore_projects = set()
@@ -46,6 +45,15 @@ def FixMissingDeps(project, threadid, output):
   packages = [item["package"] for item in all_package_errors]
   succ, project = dependency_matcher.FixDeps(threadid, packages, project)
   return succ, output + ([{"error_type": "Missing packages"}] if not succ else []), project  
+
+def FixMissingDepsWithOwnJars(project, threadid, output):
+  all_package_errors = FindAll(output, "package not found")
+  if not all_package_errors:
+    return False, output, project
+  packages = [item["package"] for item in all_package_errors]
+  succ, project = dependency_matcher.FixDepsWithOwnJars(threadid, packages, project)
+  return succ, output + ([{"error_type": "Missing packages"}] if not succ else []), project  
+
 
 def build_as_is(project, threadid, output):
   return True, output, project
@@ -122,11 +130,11 @@ def MakeBuild(project, threadid):
   classpath = ""
   mavenline = ""
   if "depends" in project:
-    depends = set([(a,b,c,d,e) for a,b,c,d,e in project["depends"]])
+    depends = set([(a,b,c,d,e,f) for a,b,c,d,e,f in project["depends"]])
     mavendepends = set([d for d in depends if d[3]])
     mavenline = "\n  ".join([d[4] for d in mavendepends])
     jardepends = depends - mavendepends
-    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4])) for d in jardepends])
+    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4]) if not d[5] else d[4]) for d in jardepends])
     if jarline or mavenline:
       if mavenline:
         classpath += "\n      <classpath refid=\"default.classpath\" />"

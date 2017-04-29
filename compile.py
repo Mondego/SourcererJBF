@@ -30,7 +30,7 @@ if __name__ == "__main__":
       projects.append(item)
   cc.make_dir(outdir, keep_old = True)
   if args.rebuild_from_scratch:
-    methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps]
+    methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
     open(outfile, "w").write(json.dumps(
         cc.main(root, projects, outdir, methods),
         sort_keys=True,

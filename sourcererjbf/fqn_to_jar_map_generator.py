@@ -32,8 +32,16 @@ def invert(jar_to_fqn):
 
 def shortened(path):
     if path.startswith(ROOT):
-        return path[len(ROOT):]
+        return path[len(ROOT):].lstrip("/")
     return path
+
+def get_all_fqns_from_path(path):
+  all_paths = set()
+  for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
+    if line.endswith(".class"):
+      all_paths.update(get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." and p != "."]))
+  return all_paths
+
 
 def make_fqn_part(locations, threadid):
   logger.info("Starting thread " + str(threadid))
@@ -53,11 +61,7 @@ def make_fqn_part(locations, threadid):
       badjarsshelve.sync()
       continue
     try:
-      for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
-        if line.endswith(".class"):
-          jar_to_fqn_part.setdefault(shortened(path), set()).update(
-              get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." and p != "."]))
-      jar_to_fqn_part.setdefault(shortened(path), set())
+      jar_to_fqn_part[shortened(path)] = get_all_fqns_from_path(path)
       shelveobj[shortened(path)] = jar_to_fqn_part[shortened(path)]
       shelveobj.sync()
 
