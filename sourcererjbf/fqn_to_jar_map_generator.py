@@ -56,7 +56,7 @@ def make_fqn_part(locations, threadid):
       for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
         if line.endswith(".class"):
           jar_to_fqn_part.setdefault(shortened(path), set()).update(
-              get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." or p != "."]))
+              get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." and p != "."]))
       jar_to_fqn_part.setdefault(shortened(path), set())
       shelveobj[shortened(path)] = jar_to_fqn_part[shortened(path)]
       shelveobj.sync()

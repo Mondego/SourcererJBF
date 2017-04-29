@@ -1,4 +1,4 @@
-import json, os
+import ujson as json, os
 from shutil import copyfile
 
 
