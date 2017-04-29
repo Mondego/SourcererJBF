@@ -33,17 +33,8 @@ def find_depends(packages, fqn_map):
   return succ, [item] + remaining
 
 def create_jar_depends(depends, local = list()):
-  return ([(None, None, None, False, copy_and_retrieve_path(depend), True) for depend in depends_local]
+  return ([(None, None, None, False, copy_and_retrieve_path(depend), True) for depend in local]
           + [(None, None, None, False, copy_and_retrieve_path(depend), False) for depend in depends])
-
-def find_depends_with_own_jars(packages, local_fqn_map):
-    remaining = set()
-    used_local_jars = set()
-    not_local = set([pkg for pkg in packages if pkg not in local_fqn_map])
-    succ, depends = find_depends(packages, local_fqn_map)
-    if not succ:
-      succ, depends = find_depends(remaining)
-    return succ, depends + used_local_jars
 
 def FixDeps(threadid, packages, project):
   not_present = [pkg for pkg in set(packages) if pkg not in FQN_TO_JAR_MAP]
@@ -63,17 +54,18 @@ def FixDepsWithOwnJars(threadid, packages, project):
   local_fqn_map = find_and_scrape_jars(threadid, project)
   not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
   remaining = set()
-  if len(not_present) > 0:
-    remaining = packages - set(not_present_locally)
+  depends = list()
+  if len(not_present_locally) > 0:
+    remaining = set(packages) - set(not_present_locally)
     not_present = [pkg for pkg in set(remaining) if pkg not in FQN_TO_JAR_MAP]
     if len(not_present) > 0:
       project["packages_not_in_fqnmap"] = not_present
       return False, project
   succ, depends_local = find_depends(set(packages), local_fqn_map)
   if len(remaining) > 0:
-    succ, depends = find_depends_with_own_jars(set(remaining), FQN_TO_JAR_MAP)
+    succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
   if not succ:
-    # How am I here??
+    print "i'm here for some reason."
     return False, project
 
   project["depends"] = create_jar_depends(depends, local = depends_local)
@@ -108,12 +100,12 @@ def copy_and_retrieve_path(depend_path):
 
 def find_and_scrape_jars(threadid, project):
   srcpath = TEMPDIR.format(threadid)
-  ownjars = check_output(["find", srcpath, "-name", "*.jar"]).split("\n")
+  ownjars = [j for j in check_output(["find", srcpath, "-name", "*.jar"]).split("\n") if j != ""]
   jar_to_fqn_map = dict()
   for j in ownjars:
     try:
       try:
-        check_output(["jarsigner", "-verify", path])
+        check_output(["jarsigner", "-verify", j])
       except CalledProcessError, e:
         if "java.lang.SecurityException" in e.output: continue
 
@@ -121,5 +113,5 @@ def find_and_scrape_jars(threadid, project):
       jar_to_fqn_map[j[len(srcpath):].lstrip("/")] = fqns
     except CalledProcessError:
       continue
-  fqn_to_jars_local = invert(jar_to_fqn)
+  fqn_to_jars_local = invert(jar_to_fqn_map)
   return fqn_to_jars_local 
