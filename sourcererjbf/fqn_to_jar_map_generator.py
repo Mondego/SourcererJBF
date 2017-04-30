@@ -7,7 +7,7 @@
 
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
-from subprocess import check_output, call, CalledProcessError, STDOUT
+from subprocess32 import check_output, call, CalledProcessError, STDOUT
 from utils import create_logger
 
 NUMBER_OF_THREADS = 20
