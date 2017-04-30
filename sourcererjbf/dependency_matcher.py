@@ -17,19 +17,21 @@ def load_fqns(folderpath, filename, threads):
 def load_or_create(folderpath, filename, threads):
   if not os.path.exists(filename):
     search_and_save(get_locations_from_folder(folderpath), filename, threads)
-  return json.load(open(filename))
+  return dict(json.load(open(filename)))
 
-def find_depends(packages, fqn_map):
+def find_depends(packages, fqn_map, debug = False):
+  if debug: print "Fqnmap length:", len(fqn_map)
   if len(packages) == 0:
     return True, []
   jar_to_fqn = {}
   for package in packages:
     if package not in fqn_map:
+      #print "Did not find", package, len(fqn_map)
       return False, []
     for jar in fqn_map[package]:
       jar_to_fqn.setdefault(jar, set()).add(package)
   item = sorted(jar_to_fqn.items(), key= lambda x: len(x[1]), reverse = True)[0][0]
-  succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map)
+  succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map, debug = debug)
   return succ, [item] + remaining
 
 def create_jar_depends(depends, local = list()):
@@ -56,7 +58,7 @@ def FixDepsWithOwnJars(threadid, packages, project):
   remaining = set()
   depends = list()
   if len(not_present_locally) > 0:
-    remaining = set(packages) - set(not_present_locally)
+    remaining = set(not_present_locally)
     not_present = [pkg for pkg in set(remaining) if pkg not in FQN_TO_JAR_MAP]
     if len(not_present) > 0:
       project["packages_not_in_fqnmap"] = not_present
@@ -65,7 +67,8 @@ def FixDepsWithOwnJars(threadid, packages, project):
   if len(remaining) > 0:
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
   if not succ:
-    print "i'm here for some reason."
+    print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
+    succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, debug = True)
     return False, project
 
   project["depends"] = create_jar_depends(depends, local = depends_local)
@@ -104,11 +107,10 @@ def find_and_scrape_jars(threadid, project):
   jar_to_fqn_map = dict()
   for j in ownjars:
     try:
-      try:
-        check_output(["jarsigner", "-verify", j])
-      except CalledProcessError, e:
-        if "java.lang.SecurityException" in e.output: continue
-
+      check_output(["jarsigner", "-verify", j])
+    except CalledProcessError, e:
+      if "java.lang.SecurityException" in e.output: continue
+    try:
       fqns = get_all_fqns_from_path(j)
       jar_to_fqn_map[j[len(srcpath):].lstrip("/")] = fqns
     except CalledProcessError:
