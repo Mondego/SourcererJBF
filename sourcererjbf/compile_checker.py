@@ -7,6 +7,7 @@
 
 import os, zipfile, shelve, shutil, json, sys, re, argparse
 from multiprocessing import Process, Lock, Queue
+from threading import Thread
 from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
 
 import output_analyzer, encode_fixer, dependency_matcher
@@ -306,8 +307,8 @@ def ConsolidateOutput():
     data = reduced[key]
     if "depends" in data:
       for i in range(len(data["depends"])):
-        a,b,c,d,e = data["depends"][i]        
-        data["depends"][i] = (a,b,c,d,e.encode("ascii", "xmlcharrefreplace"))
+        a,b,c,d,e,f = data["depends"][i]        
+        data["depends"][i] = (a,b,c,d,e.encode("ascii", "xmlcharrefreplace"),f)
     if "output" in data and len(data["output"]) > 0 and type(data["output"][0]) == type({}):
       for i in range(len(data["output"])):
         if data["output"][i]["error_type"] == "python exception":
