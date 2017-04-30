@@ -68,7 +68,7 @@ def build_as_is(project, threadid, output):
 def Analyze(output):
   return output_analyzer.Categorize(output)
 
-def Compile(threadid, generated_build):
+def Compile(threadid, generated_build, project):
   try:
     srcdir = TEMPDIR.format(threadid)
     findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
@@ -176,7 +176,7 @@ def TryCompile(trynumber, project, methods, threadid, output):
 
           ivyfile, buildfile = MakeBuild(project, threadid)
           project["timing"].append(("end_make_buildfiles_try_%d" % trynumber, time.time()))
-        succ, output, command, full_output = Compile(threadid, project["create_build"])
+        succ, output, command, full_output = Compile(threadid, project["create_build"], project)
         project["timing"].append(("end_compile_try_%d" % trynumber, time.time()))
         project["full_output"] = full_output
         if succ:
