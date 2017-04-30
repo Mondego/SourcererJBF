@@ -19,20 +19,34 @@ def load_or_create(folderpath, filename, threads):
     search_and_save(get_locations_from_folder(folderpath), filename, threads)
   return dict(json.load(open(filename)))
 
-def find_depends(packages, fqn_map, debug = False):
-  if debug: print "Fqnmap length:", len(fqn_map)
-  if len(packages) == 0:
-    return True, []
+def build_fqn_to_jar(packages, fqn_map):
   jar_to_fqn = {}
   for package in packages:
     if package not in fqn_map:
-      #print "Did not find", package, len(fqn_map)
-      return False, []
+      continue
     for jar in fqn_map[package]:
       jar_to_fqn.setdefault(jar, set()).add(package)
-  item = sorted(jar_to_fqn.items(), key= lambda x: len(x[1]), reverse = True)[0][0]
-  succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map, debug = debug)
-  return succ, [item] + remaining
+  return jar_to_fqn
+  
+def extract_deps_from_fqnmap(packages, jar_to_fqn):
+  if len(packages) == 0:
+    return True, []
+  item = sorted(jar_to_fqn.iteritems(), key= lambda x: len(x[1]), reverse = True)[0][0]
+  for jar in jar_to_fqn:
+    if jar == item: continue
+    jar_to_fqn[jar] = jar_to_fqn[jar] - jar_to_fqn[item]
+
+def find_depends(packages, fqn_map):
+  jar_to_fqn = build_fqn_to_jar(packages, fqn_map)
+  sorted_jar_list = sorted(jar_to_fqn.items(), key= lambda x: len(x[1]), reverse = True)
+  required_jars = list()
+  found_packages = set()
+  for jar, fqns in sorted_jar_list:
+      found_packages.update(fqns)
+      required_jars.append(jar)
+      if found_packages == packages:
+          break
+  return found_packages == packages, required_jars
 
 def create_jar_depends(depends, local = list()):
   return ([(None, None, None, False, copy_and_retrieve_path(depend), True) for depend in local]
@@ -67,8 +81,6 @@ def FixDepsWithOwnJars(threadid, packages, project):
   if len(remaining) > 0:
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
   if not succ:
-    print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
-    succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, debug = True)
     return False, project
 
   project["depends"] = create_jar_depends(depends, local = depends_local)
