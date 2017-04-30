@@ -1,4 +1,4 @@
-import ujson as json, os
+import ujson as json, os, time
 from shutil import copyfile
 from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
 from subprocess32 import check_output, CalledProcessError
@@ -67,19 +67,28 @@ def FixDeps(threadid, packages, project):
   return True, project
 
 def FixDepsWithOwnJars(threadid, packages, project):
+  project["timing"].append(("start_depend_match", time.time()))
   local_fqn_map = find_and_scrape_jars(threadid, project)
+  project["timing"].append(("end_local_scrape", time.time()))
   not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
   remaining = set()
   depends = list()
+  project["using_own_jars"] = len(not_present_locally) != len(packages)
   if len(not_present_locally) > 0:
     remaining = set(not_present_locally)
     not_present = [pkg for pkg in set(remaining) if pkg not in FQN_TO_JAR_MAP]
+    project["using_repo_jars"] = True
     if len(not_present) > 0:
       project["packages_not_in_fqnmap"] = not_present
       return False, project
+  else:
+    project["using_repo_jars"] = False
+
   succ, depends_local = find_depends(set(packages), local_fqn_map)
+  project["timing"].append(("end_local_match", time.time()))
   if len(remaining) > 0:
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
+  project["timing"].append(("end_repo_match", time.time()))
   if not succ:
     return False, project
 

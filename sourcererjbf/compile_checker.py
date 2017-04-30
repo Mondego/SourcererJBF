@@ -5,7 +5,7 @@
 #
 # Usage: ./compile_checker.py -r <Root Directory>
 
-import os, zipfile, shelve, shutil, json, sys, re, argparse
+import os, zipfile, shelve, shutil, json, sys, re, argparse, time
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
@@ -29,6 +29,12 @@ def TryNewBuild(project, threadid, output):
 
 def OwnBuild(project, threadid, output):
   project["create_build"] = False
+  try:
+    srcdir = TEMPDIR.format(i)
+    project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
+  except CalledProcessError:
+    project["has_own_build"] = False
+
   return True, output, project
 
 def EncodeFix(project, threadid, output):
@@ -81,7 +87,10 @@ def Compile(threadid, generated_build):
     else:
       try:
         command = "ant -f build.xml compile"
-        return True, check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS), command, ""
+        project["timing"].append(("start_build", time.time()))
+        output = check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS)
+        project["timing"].append(("end_build", time.time()))
+        return True, output, command, ""
       except CalledProcessError, e:
         return False, Analyze(e.output), command, e.output
     return False, [{"error_type": "No Build File"}], "", ""
@@ -135,7 +144,7 @@ def MakeBuild(project, threadid):
     mavendepends = set([d for d in depends if d[3]])
     mavenline = "\n  ".join([d[4] for d in mavendepends])
     jardepends = depends - mavendepends
-    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4]) if not d[5] else d[4]) for d in jardepends])
+    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4].encode("ascii", "xmlcharrefreplace")) if not d[5] else d[4].encode("ascii", "xmlcharrefreplace")) for d in jardepends])
     if jarline or mavenline:
       if mavenline:
         classpath += "\n      <classpath refid=\"default.classpath\" />"
@@ -159,13 +168,16 @@ def TryCompile(trynumber, project, methods, threadid, output):
       return TryCompile(trynumber, project, methods, threadid, output)
     else:
       succ, output, project = methods[trynumber](project, threadid, output)
+      project["timing"].append(("end_prep_%d" % trynumber, time.time()))
       if succ:
         if project["create_build"]:
 
           # LOG: 
 
           ivyfile, buildfile = MakeBuild(project, threadid)
+          project["timing"].append(("end_make_buildfiles_try_%d" % trynumber, time.time()))
         succ, output, command, full_output = Compile(threadid, project["create_build"])
+        project["timing"].append(("end_compile_try_%d" % trynumber, time.time()))
         project["full_output"] = full_output
         if succ:
           if not project["create_build"]:
@@ -258,7 +270,8 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
   i = 0
   #count = len(projects)
   project = projects.get()
-
+  project["timing"] = list()
+  project["timing"].append(("start", time.time()))
   #print 'Starting project',project["path"]
 
   while project != "DONE":
@@ -268,15 +281,17 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
     is_compressed, comp_path = True,project["path"]
     
     temppath = Uncompress(comp_path, threadid)
-
+    project["timing"].append(("end_uncompress", time.time()))
     project_path = temppath
     #print project_path
     #print project_path
     if not os.path.exists(project_path):
       continue
     CleanFolder(threadid)
+    project["timing"].append(("end_clean_folder", time.time()))
     try:
       CopyTarget(project_path, threadid)
+      project["timing"].append(("end_copy_to_tbuild", time.time()))
       # CHeck if is Android or not
       project["type"] = "android" if isAndroid(threadid) else "normal"
       failtocopy = False
@@ -287,10 +302,13 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
     #if failtocopy:
     #  print os.listdir(temppath)
     succ, output, buildfs, command = TryCompile(0, project, methods, threadid, []) if not failtocopy else (False, [{"error_type": "Copy failure"}], [], "")
+    project["timing"].append(("end_all_compile", time.time()))
     #print succ, project["file"]
     #print "command: ", command
     CopyBuildFiles(project, threadid, outdir, buildfs, succ)
+    project["timing"].append(("end_copy_class_files", time.time()))
     SaveOutput(save, project, succ, output, outdir, command)
+    project["timing"].append(("end_save_json", time.time()))
     i+=1
     if i % 10 == 0:
       print "Thread " + str(threadid) + ": " + str(i)
