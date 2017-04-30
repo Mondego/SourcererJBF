@@ -25,12 +25,17 @@ def FindAll(output, error_type):
 
 def TryNewBuild(project, threadid, output):
   project["create_build"] = True
+  try:
+    srcdir = TEMPDIR.format(threadid)
+    project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
+  except CalledProcessError:
+    project["has_own_build"] = False
   return True, output, project
 
 def OwnBuild(project, threadid, output):
   project["create_build"] = False
   try:
-    srcdir = TEMPDIR.format(i)
+    srcdir = TEMPDIR.format(threadid)
     project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
   except CalledProcessError:
     project["has_own_build"] = False
@@ -270,11 +275,13 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
   i = 0
   #count = len(projects)
   project = projects.get()
-  project["timing"] = list()
-  project["timing"].append(("start", time.time()))
+  #project["timing"] = list()
+  #project["timing"].append(("start", time.time()))
   #print 'Starting project',project["path"]
 
   while project != "DONE":
+    project["timing"] = list()
+    project["timing"].append(("start", time.time()))
   #for project in projects:
     #print project["file"], i, len(projects), threadid
     failtocopy = True
