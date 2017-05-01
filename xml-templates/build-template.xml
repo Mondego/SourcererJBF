@@ -22,7 +22,7 @@
   <target name="compile" depends="resolve"
         description="compile the source " >
     <!-- Compile the java code from src into build -->
-    <javac extdirs="{6}" srcdir="{4}" destdir="{3}" encoding="{5}" includeantruntime="false">
+    <javac extdirs="{6}" srcdir="{4}" destdir="{3}" encoding="{5}" includeantruntime="false" verbose="yes">
 {2}
     </javac>
   </target>

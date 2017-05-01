@@ -38,7 +38,8 @@ def extract_deps_from_fqnmap(packages, jar_to_fqn):
 
 def find_depends(packages, fqn_map):
   jar_to_fqn = build_fqn_to_jar(packages, fqn_map)
-  sorted_jar_list = sorted(jar_to_fqn.items(), key= lambda x: len(x[1]), reverse = True)
+  sorted_jar_list = sorted(jar_to_fqn.iteritems(), key= lambda x: len(x[1]), reverse = True)
+  #print "JARFQNLEN: ", len(sorted_jar_list)
   required_jars = list()
   found_packages = set()
   for jar, fqns in sorted_jar_list:
@@ -46,6 +47,7 @@ def find_depends(packages, fqn_map):
       required_jars.append(jar)
       if found_packages == packages:
           break
+  #print found_packages
   return found_packages == packages, required_jars
 
 def create_jar_depends(depends, local = list()):
@@ -67,13 +69,16 @@ def FixDeps(threadid, packages, project):
   return True, project
 
 def FixDepsWithOwnJars(threadid, packages, project):
+  #print "Packages:", packages
   project["timing"].append(("start_depend_match", time.time()))
   local_fqn_map = find_and_scrape_jars(threadid, project)
+  #print "LOCALFQNMAP: ", local_fqn_map
   project["timing"].append(("end_local_scrape", time.time()))
   not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
   remaining = set()
   depends = list()
-  project["using_own_jars"] = len(not_present_locally) != len(packages)
+  #print "Remaining: ", not_present_locally
+  project["using_own_jars"] = len(not_present_locally) != len(set(packages))
   if len(not_present_locally) > 0:
     remaining = set(not_present_locally)
     not_present = [pkg for pkg in set(remaining) if pkg not in FQN_TO_JAR_MAP]
@@ -83,11 +88,13 @@ def FixDepsWithOwnJars(threadid, packages, project):
       return False, project
   else:
     project["using_repo_jars"] = False
-
+  #print "LOCALFQNMAP: ", local_fqn_map
   succ, depends_local = find_depends(set(packages), local_fqn_map)
+  #print "Local Jars: ", depends_local
   project["timing"].append(("end_local_match", time.time()))
   if len(remaining) > 0:
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
+    #print "Uber Jars: ", depends
   project["timing"].append(("end_repo_match", time.time()))
   if not succ:
     return False, project

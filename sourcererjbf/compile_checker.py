@@ -76,9 +76,9 @@ def Analyze(output):
 def Compile(threadid, generated_build, project):
   try:
     srcdir = TEMPDIR.format(threadid)
-    findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
-    if findjava == "":
-      return False, [{"error_type": "No Java Files"}], "", ""
+    #findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
+    #if findjava == "":
+    #  return False, [{"error_type": "No Java Files"}], "", ""
     if not generated_build:
       findbuild = check_output(["find", srcdir, "-name", "build.xml"], timeout = TIMEOUT_SECONDS).split()
       if findbuild != []:
@@ -306,9 +306,9 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
     except Exception, e:
       print "Found Exception", e
       continue
-    #if failtocopy:
-    #  print os.listdir(temppath)
-    succ, output, buildfs, command = TryCompile(0, project, methods, threadid, []) if not failtocopy else (False, [{"error_type": "Copy failure"}], [], "")
+    srcdir = TEMPDIR.format(threadid)
+    findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
+    succ, output, buildfs, command = (TryCompile(0, project, methods, threadid, []) if not failtocopy else (False, [{"error_type": "Copy failure"}], [], "") if findjava != "" else (False, [{"error_type": "No Java Files"}], "", ""))
     project["timing"].append(("end_all_compile", time.time()))
     #print succ, project["file"]
     #print "command: ", command
