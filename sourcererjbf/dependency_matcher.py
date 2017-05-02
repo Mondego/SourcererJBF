@@ -63,11 +63,11 @@ def FixDepsWithOwnJars(threadid, packages, project):
     if len(not_present) > 0:
       project["packages_not_in_fqnmap"] = not_present
       return False, project
-  succ, depends_local = find_depends(set(packages), local_fqn_map)
+  succ, depends_local = find_depends(set(packages) - set(remaining), local_fqn_map)
   if len(remaining) > 0:
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
   if not succ:
-    print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
+    #print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, debug = True)
     return False, project
 
