@@ -1,4 +1,4 @@
-import ujson as json, os, time
+import ujson as json, os
 from shutil import copyfile
 from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
 from subprocess32 import check_output, CalledProcessError
@@ -19,36 +19,20 @@ def load_or_create(folderpath, filename, threads):
     search_and_save(get_locations_from_folder(folderpath), filename, threads)
   return dict(json.load(open(filename)))
 
-def build_fqn_to_jar(packages, fqn_map):
+def find_depends(packages, fqn_map, debug = False):
+  if debug: print "Fqnmap length:", len(fqn_map)
+  if len(packages) == 0:
+    return True, []
   jar_to_fqn = {}
   for package in packages:
     if package not in fqn_map:
-      continue
+      #print "Did not find", package, len(fqn_map)
+      return False, []
     for jar in fqn_map[package]:
       jar_to_fqn.setdefault(jar, set()).add(package)
-  return jar_to_fqn
-  
-def extract_deps_from_fqnmap(packages, jar_to_fqn):
-  if len(packages) == 0:
-    return True, []
-  item = sorted(jar_to_fqn.iteritems(), key= lambda x: len(x[1]), reverse = True)[0][0]
-  for jar in jar_to_fqn:
-    if jar == item: continue
-    jar_to_fqn[jar] = jar_to_fqn[jar] - jar_to_fqn[item]
-
-def find_depends(packages, fqn_map):
-  jar_to_fqn = build_fqn_to_jar(packages, fqn_map)
-  sorted_jar_list = sorted(jar_to_fqn.iteritems(), key= lambda x: len(x[1]), reverse = True)
-  #print "JARFQNLEN: ", len(sorted_jar_list)
-  required_jars = list()
-  found_packages = set()
-  for jar, fqns in sorted_jar_list:
-      found_packages.update(fqns)
-      required_jars.append(jar)
-      if found_packages == packages:
-          break
-  #print found_packages
-  return found_packages == packages, required_jars
+  item = sorted(jar_to_fqn.items(), key= lambda x: len(x[1]), reverse = True)[0][0]
+  succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map, debug = debug)
+  return succ, [item] + remaining
 
 def create_jar_depends(depends, local = list()):
   return ([(None, None, None, False, copy_and_retrieve_path(depend), True) for depend in local]
@@ -69,34 +53,22 @@ def FixDeps(threadid, packages, project):
   return True, project
 
 def FixDepsWithOwnJars(threadid, packages, project):
-  #print "Packages:", packages
-  project["timing"].append(("start_depend_match", time.time()))
   local_fqn_map = find_and_scrape_jars(threadid, project)
-  #print "LOCALFQNMAP: ", local_fqn_map
-  project["timing"].append(("end_local_scrape", time.time()))
   not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
   remaining = set()
   depends = list()
-  #print "Remaining: ", not_present_locally
-  project["using_own_jars"] = len(not_present_locally) != len(set(packages))
   if len(not_present_locally) > 0:
     remaining = set(not_present_locally)
     not_present = [pkg for pkg in set(remaining) if pkg not in FQN_TO_JAR_MAP]
-    project["using_repo_jars"] = True
     if len(not_present) > 0:
       project["packages_not_in_fqnmap"] = not_present
       return False, project
-  else:
-    project["using_repo_jars"] = False
-  #print "LOCALFQNMAP: ", local_fqn_map
-  succ, depends_local = find_depends(set(packages), local_fqn_map)
-  #print "Local Jars: ", depends_local
-  project["timing"].append(("end_local_match", time.time()))
+  succ, depends_local = find_depends(set(packages) - set(remaining), local_fqn_map)
   if len(remaining) > 0:
     succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
-    #print "Uber Jars: ", depends
-  project["timing"].append(("end_repo_match", time.time()))
   if not succ:
+    #print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
+    succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, debug = True)
     return False, project
 
   project["depends"] = create_jar_depends(depends, local = depends_local)
