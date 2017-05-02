@@ -14,9 +14,11 @@ if __name__ == "__main__":
   parser.add_argument('-ftj', '--fqn_to_jar', default="fqn-to-jars.json", type=str, help ='The file that represents the mapping of fqn to jar in repository.')
   parser.add_argument('-t', '--threads', default=10, type=int, help ='The number of base threads to be run.')
   parser.add_argument('-tpb', '--try_project_build', action='store_true', help ='Use project build files first if it exists.')
+  parser.add_argument('-v', '--verbose', action='store_true', help ='Forces javac output to be verbose. Default False')
   args = parser.parse_args()
   root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
   cc.JAR_REPO = args.jars
+  cc.VERBOSE = args.verbose
   if args.rebuild_from_scratch:
     dm.load_fqns(args.jars, args.fqn_to_jar, args.threads)
   if not os.path.exists("TBUILD"):

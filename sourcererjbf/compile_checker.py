@@ -17,6 +17,7 @@ from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
 THREADCOUNT = 50
 PATH_logs = "logs"
 JAR_REPO = ""
+VERBOSE = False
 ignore_projects = set()
 
 # Causes infinite loop
@@ -158,7 +159,7 @@ def MakeBuild(project, threadid):
 
   desc = project["description"] if "description" in project else ""
   ivyfile = open("xml-templates/ivy-template.xml", "r").read().format(project["name"]  if "name" in project else "compile_checker_build", mavenline)
-  buildfile = open("xml-templates/build-template.xml", "r").read().format(project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}", project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"))
+  buildfile = open("xml-templates/build-template.xml", "r").read().format(project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}", project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"), "yes" if VERBOSE else "no")
   srcdir = TEMPDIR.format(threadid)
   open(os.path.join(srcdir, "ivy.xml"), "w").write(ivyfile)
   open(os.path.join(srcdir, "build.xml"), "w").write(buildfile)
