@@ -39,7 +39,8 @@ def get_all_fqns_from_path(path):
   all_paths = set()
   for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
     if line.endswith(".class"):
-      all_paths.update(get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." and p != "."]))
+      new_line = "/".join(l for l in line[:-6].split("$") if not re.match(r"\d+", l))
+      all_paths.update(get_all_variations([p for p in new_line.split("/") if p != ".." and p != "."]))
   return all_paths
 
 
