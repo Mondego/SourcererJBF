@@ -5,15 +5,21 @@ errorre = re.compile("\[javac\]\s+(.*?):\d+:\s+error:\s+(.*)")
 rclasspublic = re.compile("class .*? is public, should be declared in a file named.*")
 rpackage = re.compile("package\s+(.*?)\s+does not exist")
 runmappable = re.compile("unmappable character for encoding\s+(.*)")
-getpackage = re.compile("\[javac\]\s+import\s+(.*?);")
+#getpackage = re.compile("\[javac\]\s+import\s+(.*?);")
 
 def errortype(error_info):
   item = error_info["error"]
   if rpackage.match(item):
-    return {
+    getpackage = re.findall(rpackage.match(item).groups()[0].replace(".", "\\.") + r"\.[a-zA-Z0-9_\*]+", error_info["next_line"])
+    try:
+      return {
         "error_type": "package not found",
-        "package": getpackage.match(error_info["next_line"]).groups()[0]
-    }
+        #"package": getpackage.match(error_info["next_line"]).groups()[0] if getpackage.match(error_info["next_line"]) else rpackage.match(item).groups()[0]
+        "package": getpackage[0].rstrip("*").rstrip(".")
+      }
+    except AttributeError:
+      print "NEXT LINE", error_info["next_line"]
+      raise
   elif rclasspublic.match(item):
     return { "error_type": "class should be in its own file." }
   elif runmappable.match(item):
