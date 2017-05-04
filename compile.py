@@ -15,6 +15,7 @@ if __name__ == "__main__":
   parser.add_argument('-t', '--threads', default=10, type=int, help ='The number of base threads to be run.')
   parser.add_argument('-tpb', '--try_project_build', action='store_true', help ='Use project build files first if it exists.')
   parser.add_argument('-v', '--verbose', action='store_true', help ='Forces javac output to be verbose. Default False')
+  parser.add_argument('-opb', '--only_project_build', action='store_true', help ='Only use project build files.')
   args = parser.parse_args()
   root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
   cc.JAR_REPO = args.jars
@@ -32,7 +33,10 @@ if __name__ == "__main__":
       projects.append(item)
   cc.make_dir(outdir, keep_old = True)
   if args.rebuild_from_scratch:
-    methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
+    if args.only_project_build:
+      methods = [cc.OwnBuild]
+    else:
+      methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
     open(outfile, "w").write(json.dumps(
         cc.main(root, projects, outdir, methods),
         sort_keys=True,

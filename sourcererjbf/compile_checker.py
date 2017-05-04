@@ -37,7 +37,24 @@ def OwnBuild(project, threadid, output):
   project["create_build"] = False
   try:
     srcdir = TEMPDIR.format(threadid)
-    project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
+    ant_find = check_output(["find", srcdir, "-name", "build.xml"])
+    if ant_find != "":
+      project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
+      project["has_own_build"] = True
+      return True, output, project
+    
+    mvn_find = check_output(["find", srcdir, "-name", "pom.xml"])
+    if mvn_find != "":
+      project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip()]
+      project["has_own_build"] = True
+      return True, output, project
+    
+    gradle_find = check_output(["find", srcdir, "-name", "build.gradle"])
+    if gradle_find != "":
+      project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip()]
+      project["has_own_build"] = True
+      return True, output, project
+
   except CalledProcessError:
     project["has_own_build"] = False
 
@@ -81,15 +98,14 @@ def Compile(threadid, generated_build, project):
     #if findjava == "":
     #  return False, [{"error_type": "No Java Files"}], "", ""
     if not generated_build:
-      findbuild = check_output(["find", srcdir, "-name", "build.xml"], timeout = TIMEOUT_SECONDS).split()
-      if findbuild != []:
-        try:
-          findbuild = findbuild[0]
-          command = " ".join(["ant", "-f", findbuild.strip()[len(srcdir):], "compile"])
-          #print findbuild.strip()
-          return True, check_output(["ant", "-f", findbuild.strip(), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS), command, ""
-        except CalledProcessError, e:
-          return False, Analyze(e.output), command, e.output
+      try:
+        command = " ".join(project["use_command"])
+        project["timing"].append(("start_build", time.time()))
+        output = check_output(project["use_command"], stderr = STDOUT, timeout = TIMEOUT_SECONDS)
+        project["timing"].append(("end_build", time.time()))
+        return True, output, command, ""
+      except CalledProcessError, e:
+        return False, Analyze(e.output), command, e.output
     else:
       try:
         command = "ant -f build.xml compile"
