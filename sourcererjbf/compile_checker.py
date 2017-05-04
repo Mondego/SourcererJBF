@@ -45,7 +45,7 @@ def OwnBuild(project, threadid, output):
     
     mvn_find = check_output(["find", srcdir, "-name", "pom.xml"])
     if mvn_find != "":
-      project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip()]
+      project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
       project["has_own_build"] = True
       return True, output, project
     
