@@ -1,11 +1,11 @@
 import zipfile
 from multiprocessing import Process
 #from sourcererjbf.fqn_to_jar_map_generator import get_all_fqns_from_path
-import shelve, os, ujson
+import shelve, os, json
 from subprocess import check_output, call, CalledProcessError, STDOUT
 
 goodjars = open("goodjars.txt").read().split("\n")[:-1]
-THREADCOUNT = 24
+THREADCOUNT = 1120
 ROOT = "/extra/lopes1/mondego-data/jars"
 processes = list()
 
@@ -29,18 +29,18 @@ def scrape(i, jars):
         print "There was another exception.", e, j
 
 
-for i in range(THREADCOUNT):
-  processes.append(Process(target = scrape, args = (i, goodjars[i::THREADCOUNT])))
-  processes[-1].daemon = True
-  processes[-1].start()
+#for i in range(THREADCOUNT):
+#  processes.append(Process(target = scrape, args = (i, goodjars[i::THREADCOUNT])))
+#  processes[-1].daemon = True
+#  processes[-1].start()
 
-for i in range(THREADCOUNT):
-  processes[i].join()
+#for i in range(THREADCOUNT):
+#  processes[i].join()
 
-full_namelist = list()
+full_namelist = dict()
 for i in range(THREADCOUNT):
   full_namelist.update(dict(shelve.open("saves/scrape.shelve.%d" % i)))
 
 
-ujson.dump(open("jar_details.json", "w"), indent = 4, sort_keys = True, escape_forward_slashes=False)
+json.dump(full_namelist, open("jar_details.json", "w"), indent = 4, sort_keys = True, separators = (',', ': '))
 

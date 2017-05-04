@@ -9,6 +9,7 @@ import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
 from subprocess32 import check_output, call, CalledProcessError, STDOUT
 from utils import create_logger
+from zipfile import ZipFile
 
 NUMBER_OF_THREADS = 20
 logger = create_logger("fqn_to_jar")
@@ -37,9 +38,13 @@ def shortened(path):
 
 def get_all_fqns_from_path(path):
   all_paths = set()
-  for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
+  try:
+    lines = ZipFile(path).namelist()
+  except Exception:
+    lines = check_output(["jar", "tf", path], stderr = STDOUT).split("\n")
+  for line in lines:
     if line.endswith(".class"):
-      new_line = "/".join(l for l in line[:-6].split("$") if not re.match(r"\d+", l))
+      new_line = "/".join(l for l in line.strip()[:-6].split("$") if not re.match(r"\d+", l))
       all_paths.update(get_all_variations([p for p in new_line.split("/") if p != ".." and p != "."]))
   return all_paths
 

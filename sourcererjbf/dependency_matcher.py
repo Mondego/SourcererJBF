@@ -1,4 +1,4 @@
-import ujson as json, os
+import json, os, shelve
 from shutil import copyfile
 from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
 from subprocess32 import check_output, CalledProcessError
@@ -17,7 +17,7 @@ def load_fqns(folderpath, filename, threads):
 def load_or_create(folderpath, filename, threads):
   if not os.path.exists(filename):
     search_and_save(get_locations_from_folder(folderpath), filename, threads)
-  return dict(json.load(open(filename)))
+  return shelve.open(filename)
 
 def find_depends(packages, fqn_map, debug = False):
   if debug: print "Fqnmap length:", len(fqn_map)

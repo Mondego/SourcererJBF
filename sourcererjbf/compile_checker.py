@@ -150,7 +150,7 @@ def MakeBuild(project, threadid):
     mavendepends = set([d for d in depends if d[3]])
     mavenline = "\n  ".join([d[4] for d in mavendepends])
     jardepends = depends - mavendepends
-    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4].encode("ascii", "xmlcharrefreplace")) if not d[5] else d[4].encode("ascii", "xmlcharrefreplace")) for d in jardepends])
+    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
     if jarline or mavenline:
       if mavenline:
         classpath += "\n      <classpath refid=\"default.classpath\" />"
@@ -201,7 +201,6 @@ def TryCompile(trynumber, project, methods, threadid, output):
   except TimeoutExpired:
     return False, [{"error_type": "Timeout Expired"}]
   except Exception, e:
-    raise
     return False, [{"error_type": "python exception", "error": str(e)}], [], ""
 
 def CopyTarget(projectpath, threadid):
@@ -334,7 +333,10 @@ def ConsolidateOutput():
     if "depends" in data:
       for i in range(len(data["depends"])):
         a,b,c,d,e,f = data["depends"][i]        
-        data["depends"][i] = (a,b,c,d,e.encode("ascii", "xmlcharrefreplace"),f)
+        try:
+          data["depends"][i] = (a,b,c,d,e.encode("ascii", "xmlcharrefreplace"),f)
+        except UnicodeDecodeError:
+          data["depends"][i] = (a,b,c,d,"UNICDOE ERROR JAR",f)
     if "output" in data and len(data["output"]) > 0 and type(data["output"][0]) == type({}):
       for i in range(len(data["output"])):
         if data["output"][i]["error_type"] == "python exception":
@@ -361,6 +363,7 @@ def main(root, projects, outdir, methods,):
     processes.append(Process(target = CompileAndSave, args = (i, p, methods, root, outdir)))
     processes[-1].daemon = True
     processes[-1].start()
+    time.sleep(0.5)
 
   for i in range(THREADCOUNT):
     processes[i].join()
