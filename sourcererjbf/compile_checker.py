@@ -34,31 +34,38 @@ def TryNewBuild(project, threadid, output):
   return True, output, project
 
 def OwnBuild(project, threadid, output):
-  project["create_build"] = False
+  #project["create_build"] = False
   try:
     srcdir = TEMPDIR.format(threadid)
     ant_find = check_output(["find", srcdir, "-name", "build.xml"])
     if ant_find != "":
       project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
       project["has_own_build"] = True
+      project["create_build"] = False
+      #print "ANT: ", project["path"]
       return True, output, project
     
     mvn_find = check_output(["find", srcdir, "-name", "pom.xml"])
     if mvn_find != "":
       project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
       project["has_own_build"] = True
+      project["create_build"] = False
+      #print "MVN: ", project["path"]
       return True, output, project
     
     gradle_find = check_output(["find", srcdir, "-name", "build.gradle"])
     if gradle_find != "":
-      project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip()]
+      project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
       project["has_own_build"] = True
+      project["create_build"] = False
+      #print "Gradle: ", project["path"]
       return True, output, project
 
   except CalledProcessError:
     project["has_own_build"] = False
-
-  return True, output, project
+  project["has_own_build"] = False
+  project["create_build"] = False
+  return False, output, project
 
 def EncodeFix(project, threadid, output):
   all_encoding = FindAll(output, "unmappable character")

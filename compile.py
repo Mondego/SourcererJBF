@@ -20,7 +20,7 @@ if __name__ == "__main__":
   root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
   cc.JAR_REPO = args.jars
   cc.VERBOSE = args.verbose
-  if args.rebuild_from_scratch:
+  if args.rebuild_from_scratch and not args.only_project_build:
     dm.load_fqns(args.jars, args.fqn_to_jar, args.threads)
   if not os.path.exists("TBUILD"):
     os.makedirs("TBUILD") 
