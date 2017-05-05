@@ -5,7 +5,7 @@
 #
 # Usage: ./compile_checker.py -r <Root Directory>
 
-import os, zipfile, shelve, shutil, json, sys, re, argparse, time
+import os, zipfile, shelve, shutil, json, sys, re, argparse, time, datetime
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
@@ -154,14 +154,22 @@ def unzip(zipFilePath, destDir):
   except Exception as e:
     pass
 
-def RemoveTouched(projects):
+def RemoveTouched(projects, recordq):
   if os.path.exists("TBUILD"):
+    if os.listdir("TBUILD") == []:
+      return projects
     for f in os.listdir("TBUILD"):
       if f.endswith(".shelve"):
         save = shelve.open("TBUILD/" + f)
-        projects = [project for project in projects if project["file"] not in save and project["file"] not in ignore_projects]
+        new_projects = list()
+        for project in projects:
+          if project["file"] not in save and project["file"] not in ignore_projects:
+            new_projects.append(project)
+          else:
+            recordq.put(save[project["file"]]["success"] if project["file"] in save else False)
+        #projects = [project for project in projects if project["file"] not in save and project["file"] not in ignore_projects]
         save.close()
-    return projects
+    return new_projects
   else:
     return projects
 
@@ -393,6 +401,8 @@ def progressbar(recordq, total):
   count = 0
   succ = 0
   fail = 0
+  start_t = time.time()
+  progress(0, 0, 0, total, suffix = "Initalizing Threads")
   item = recordq.get()
   while item != "DONE":
     count += 1
@@ -400,7 +410,11 @@ def progressbar(recordq, total):
       succ += 1
     else:
       fail += 1
-    progress(count, succ, fail, suffix = "%d(%.2f)S, %d Total" % (succ, float(succ) * 100 /float(succ + fail), succ + fail))
+    time_left = (total - count) * (time.time() - start_t) / count
+    hrs = time_left / 3600
+    strtime = "%d:%d:%d" % (time_left / 3600, (time_left % 3600) / 60, ((time_left % 3600) % 60))
+    
+    progress(count, succ, fail, total, suffix = "%d(%.1fper)PASS, %d Total, ETA: %s" % (succ, float(succ) * 100 /float(succ + fail), succ + fail, strtime))
     item = recordq.get()
   print "\n"
 
@@ -408,18 +422,19 @@ def main(root, projects, outdir, methods,):
   processes = []
   p = Queue()
   recordq = Queue()
-  for proj in RemoveTouched(projects):
+  for proj in RemoveTouched(projects, recordq):
     p.put(proj)
   for i in range(THREADCOUNT):
     p.put("DONE")
+  recorder = Thread(target = progressbar, args = (recordq, len(projects)))
+  recorder.daemon = True
+  recorder.start()
   for i in range(THREADCOUNT):
     processes.append(Process(target = CompileAndSave, args = (i, p, methods, root, outdir, recordq)))
     processes[-1].daemon = True
     processes[-1].start()
     time.sleep(0.5)
-  recorder = Thread(target = progressbar, args = (recordq,))
-  recorder.daemon = True
-  recorder.start()
+
   for i in range(THREADCOUNT):
     processes[i].join()
   recordq.put("DONE")
@@ -437,7 +452,7 @@ def getProjects(root, infile):
     return [{"file": line[:-4], "path": os.path.join(root, line)} for line in open(infile).read().split("\n") if line]
 
 if __name__ == "__main__":
-  global THREADCOUNT, JAR_REPO
+  #global THREADCOUNT, JAR_REPO
   parser = argparse.ArgumentParser()
   parser.add_argument('-r', '--root', type=str, help ='The directory under which all the java projects to be compiled exist.')
   parser.add_argument('-f', '--file', type=str, default= "AUTOGEN", help ='The file with project paths to be build. Paths in file are considered relative to the root directory.')
