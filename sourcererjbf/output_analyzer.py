@@ -18,8 +18,11 @@ def errortype(error_info):
         "package": getpackage[0].rstrip("*").rstrip(".")
       }
     except Exception:
-      print "NEXT LINE", error_info["next_line"], item
-      return {"error_type": "Package scraping exception" }
+      #print "NEXT LINE", error_info["next_line"], item
+      return { 
+        "error_type": "package not found",
+        "package": rpackage.match(item).groups()[0]
+      }
   elif rclasspublic.match(item):
     return { "error_type": "class should be in its own file." }
   elif runmappable.match(item):

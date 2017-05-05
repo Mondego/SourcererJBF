@@ -12,7 +12,7 @@ from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, 
 
 import output_analyzer, encode_fixer, dependency_matcher
 
-from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
+from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
 
 THREADCOUNT = 50
 PATH_logs = "logs"
@@ -292,7 +292,7 @@ def Uncompress(comp_path, threadid):
   check_output(["chmod", "777", "-R", path])
   return path
 
-def CompileAndSave(threadid, projects, methods, root, outdir):
+def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
   save = shelve.open(PARTMAP.format(threadid))
   #projects = RemoveTouched(save, projects)
   i = 0
@@ -327,7 +327,7 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
       failtocopy = False
       
     except Exception, e:
-      print "Found Exception", e
+      #print "Found Exception", e
       continue
     srcdir = TEMPDIR.format(threadid)
     findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
@@ -339,9 +339,10 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
     project["timing"].append(("end_copy_class_files", time.time()))
     SaveOutput(save, project, succ, output, outdir, command)
     project["timing"].append(("end_save_json", time.time()))
-    i+=1
-    if i % 10 == 0:
-      print "Thread " + str(threadid) + ": " + str(i)
+    reportq.put(succ)
+    #i+=1
+    #if i % 10 == 0:
+    #  print "Thread " + str(threadid) + ": " + str(i)
     project = projects.get()
   print "Done with Thread ", threadid
 #  CleanFolder(threadid)
@@ -363,7 +364,7 @@ def ConsolidateOutput():
     if "output" in data and len(data["output"]) > 0 and type(data["output"][0]) == type({}):
       for i in range(len(data["output"])):
         if data["output"][i]["error_type"] == "python exception":
-          print data["output"][i]["error"]
+          #print data["output"][i]["error"]
           data["output"][i]["error"] = repr(data["output"][i]["error"])
         if "error" in data["output"][i]:
           try:
@@ -375,21 +376,54 @@ def ConsolidateOutput():
   print "Writing json"
   return final
 
+def progress(count, succ, fail, total, suffix=''):
+  bar_len = 60
+  succ_filled_len = int(round(bar_len * succ / float(total)))
+  fail_filled_len = int(round(bar_len * fail / float(total)))
+  
+  percents = round(100.0 * count / float(total), 1)
+  bar = (bcolors.OKGREEN + ('|' * succ_filled_len) + bcolors.ENDC
+        + bcolors.WARNING + ('|' * fail_filled_len) + bcolors.ENDC
+        + ' ' * (bar_len - succ_filled_len - fail_filled_len))
+
+  sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
+  sys.stdout.flush()  # As suggested by Rom Ruben
+
+def progressbar(recordq, total):
+  count = 0
+  succ = 0
+  fail = 0
+  item = recordq.get()
+  while item != "DONE":
+    count += 1
+    if item:
+      succ += 1
+    else:
+      fail += 1
+    progress(count, succ, fail, suffix = "%d(%.2f)S, %d Total" % (succ, float(succ) * 100 /float(succ + fail), succ + fail))
+    item = recordq.get()
+  print "\n"
+
 def main(root, projects, outdir, methods,):
   processes = []
   p = Queue()
+  recordq = Queue()
   for proj in RemoveTouched(projects):
     p.put(proj)
   for i in range(THREADCOUNT):
     p.put("DONE")
   for i in range(THREADCOUNT):
-    processes.append(Process(target = CompileAndSave, args = (i, p, methods, root, outdir)))
+    processes.append(Process(target = CompileAndSave, args = (i, p, methods, root, outdir, recordq)))
     processes[-1].daemon = True
     processes[-1].start()
     time.sleep(0.5)
-
+  recorder = Thread(target = progressbar, args = (recordq,))
+  recorder.daemon = True
+  recorder.start()
   for i in range(THREADCOUNT):
     processes[i].join()
+  recordq.put("DONE")
+  time.sleep(1)
   print "Done with all threads."
   return ConsolidateOutput()
 
