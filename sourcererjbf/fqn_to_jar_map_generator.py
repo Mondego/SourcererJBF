@@ -127,7 +127,7 @@ def get_locations_from_folder(location):
     print "Error when trying to find jars in folder", location
 
 if __name__ == "__main__":
-  global ROOT
+  #global ROOT
   if len(sys.argv) < 3:
     print "Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map> [<root>]"
     sys.exit(0)

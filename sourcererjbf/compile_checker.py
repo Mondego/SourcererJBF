@@ -352,7 +352,7 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
     #if i % 10 == 0:
     #  print "Thread " + str(threadid) + ": " + str(i)
     project = projects.get()
-  print "Done with Thread ", threadid
+  #print "Done with Thread ", threadid
 #  CleanFolder(threadid)
 
 def ConsolidateOutput():
@@ -398,6 +398,7 @@ def progress(count, succ, fail, total, suffix=''):
   sys.stdout.flush()  # As suggested by Rom Ruben
 
 def progressbar(recordq, total):
+  print "TOTAL NUMBER OF PROJECTS TO COMPILE:", total
   count = 0
   succ = 0
   fail = 0
