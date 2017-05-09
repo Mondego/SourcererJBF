@@ -118,7 +118,7 @@ def search_and_save(jarlocations, savefile, threads):
       open(savefile, "w"),
       sort_keys=True, 
       indent=4, 
-      separators=(',', ': '), escape_forward_slashes=False)
+      separators=(',', ': '))
 
 def get_locations_from_folder(location):
   try:

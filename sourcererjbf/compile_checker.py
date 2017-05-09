@@ -158,10 +158,11 @@ def RemoveTouched(projects, recordq):
   if os.path.exists("TBUILD"):
     if os.listdir("TBUILD") == []:
       return projects
+    new_projects = list()
     for f in os.listdir("TBUILD"):
       if f.endswith(".shelve"):
         save = shelve.open("TBUILD/" + f)
-        new_projects = list()
+        #new_projects = list()
         for project in projects:
           if project["file"] not in save and project["file"] not in ignore_projects:
             new_projects.append(project)
