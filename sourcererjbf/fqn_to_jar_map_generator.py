@@ -111,14 +111,24 @@ def make_fqn_map(jar_locations, tc):
   logger.info("Starting reduce and invert")
   return invert(reducequeue())
   
+def save_to_shelve(savefile, fqn_map):
+  sh = shelve.open(savefile)
+  for fqn in fqn_map:
+    try:
+      sh[str(fqn)] = fqn_map[fqn]
+      sh.sync()
+    except UnicodeDecodeError:
+      print "Decode Exception when writing out fqn: ", fqn
+      continue
+  sh.close()
 
 def search_and_save(jarlocations, savefile, threads):
-  json.dump(
-      make_fqn_map(jarlocations, threads),
-      open(savefile, "w"),
-      sort_keys=True, 
-      indent=4, 
-      separators=(',', ': '))
+  save_to_shelve(savefile,
+      make_fqn_map(jarlocations, threads))
+      #open(savefile, "w"),
+      #sort_keys=True, 
+      #indent=4, 
+      #separators=(',', ': '))
 
 def get_locations_from_folder(location):
   try:
