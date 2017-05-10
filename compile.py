@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sourcererjbf.compile_checker as cc
 import sourcererjbf.dependency_matcher as dm
+import sourcererjbf.fqn_to_jar_map_generator as ftjmg
 import os, json, argparse
 
 if __name__ == "__main__":
@@ -21,6 +22,7 @@ if __name__ == "__main__":
   cc.JAR_REPO = args.jars
   cc.VERBOSE = args.verbose
   if args.rebuild_from_scratch and not args.only_project_build:
+    ftjmg.ROOT = args.jars
     dm.load_fqns(args.jars, args.fqn_to_jar, args.threads)
   if not os.path.exists("TBUILD"):
     os.makedirs("TBUILD") 
