@@ -5,18 +5,19 @@
 #
 # Usage: ./compile_checker.py -r <Root Directory>
 
-import os, zipfile, shelve, shutil, json, sys, re, argparse, time
+import os, zipfile, shelve, shutil, json, sys, re, argparse, time, datetime
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
 
 import output_analyzer, encode_fixer, dependency_matcher
 
-from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
+from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
 
 THREADCOUNT = 50
 PATH_logs = "logs"
 JAR_REPO = ""
+VERBOSE = False
 ignore_projects = set()
 
 # Causes infinite loop
@@ -33,14 +34,38 @@ def TryNewBuild(project, threadid, output):
   return True, output, project
 
 def OwnBuild(project, threadid, output):
-  project["create_build"] = False
+  #project["create_build"] = False
   try:
     srcdir = TEMPDIR.format(threadid)
-    project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
+    ant_find = check_output(["find", srcdir, "-name", "build.xml"])
+    if ant_find != "":
+      project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
+      project["has_own_build"] = True
+      project["create_build"] = False
+      #print "ANT: ", project["path"]
+      return True, output, project
+    
+    mvn_find = check_output(["find", srcdir, "-name", "pom.xml"])
+    if mvn_find != "":
+      project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
+      project["has_own_build"] = True
+      project["create_build"] = False
+      #print "MVN: ", project["path"]
+      return True, output, project
+    
+    gradle_find = check_output(["find", srcdir, "-name", "build.gradle"])
+    if gradle_find != "":
+      project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
+      project["has_own_build"] = True
+      project["create_build"] = False
+      #print "Gradle: ", project["path"]
+      return True, output, project
+
   except CalledProcessError:
     project["has_own_build"] = False
-
-  return True, output, project
+  project["has_own_build"] = False
+  project["create_build"] = False
+  return False, output, project
 
 def EncodeFix(project, threadid, output):
   all_encoding = FindAll(output, "unmappable character")
@@ -80,15 +105,14 @@ def Compile(threadid, generated_build, project):
     #if findjava == "":
     #  return False, [{"error_type": "No Java Files"}], "", ""
     if not generated_build:
-      findbuild = check_output(["find", srcdir, "-name", "build.xml"], timeout = TIMEOUT_SECONDS).split()
-      if findbuild != []:
-        try:
-          findbuild = findbuild[0]
-          command = " ".join(["ant", "-f", findbuild.strip()[len(srcdir):], "compile"])
-          #print findbuild.strip()
-          return True, check_output(["ant", "-f", findbuild.strip(), "compile"], stderr = STDOUT, timeout = TIMEOUT_SECONDS), command, ""
-        except CalledProcessError, e:
-          return False, Analyze(e.output), command, e.output
+      try:
+        command = " ".join(project["use_command"])
+        project["timing"].append(("start_build", time.time()))
+        output = check_output(project["use_command"], stderr = STDOUT, timeout = TIMEOUT_SECONDS)
+        project["timing"].append(("end_build", time.time()))
+        return True, output, command, ""
+      except CalledProcessError, e:
+        return False, Analyze(e.output), command, e.output
     else:
       try:
         command = "ant -f build.xml compile"
@@ -130,14 +154,23 @@ def unzip(zipFilePath, destDir):
   except Exception as e:
     pass
 
-def RemoveTouched(projects):
+def RemoveTouched(projects, recordq):
   if os.path.exists("TBUILD"):
+    if os.listdir("TBUILD") == []:
+      return projects
+    new_projects = list()
     for f in os.listdir("TBUILD"):
       if f.endswith(".shelve"):
         save = shelve.open("TBUILD/" + f)
-        projects = [project for project in projects if project["file"] not in save and project["file"] not in ignore_projects]
+        #new_projects = list()
+        for project in projects:
+          if project["file"] not in save and project["file"] not in ignore_projects:
+            new_projects.append(project)
+          else:
+            recordq.put(save[project["file"]]["success"] if project["file"] in save else False)
+        #projects = [project for project in projects if project["file"] not in save and project["file"] not in ignore_projects]
         save.close()
-    return projects
+    return new_projects
   else:
     return projects
 
@@ -149,7 +182,7 @@ def MakeBuild(project, threadid):
     mavendepends = set([d for d in depends if d[3]])
     mavenline = "\n  ".join([d[4] for d in mavendepends])
     jardepends = depends - mavendepends
-    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4].encode("ascii", "xmlcharrefreplace")) if not d[5] else d[4].encode("ascii", "xmlcharrefreplace")) for d in jardepends])
+    jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../..", JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
     if jarline or mavenline:
       if mavenline:
         classpath += "\n      <classpath refid=\"default.classpath\" />"
@@ -158,7 +191,7 @@ def MakeBuild(project, threadid):
 
   desc = project["description"] if "description" in project else ""
   ivyfile = open("xml-templates/ivy-template.xml", "r").read().format(project["name"]  if "name" in project else "compile_checker_build", mavenline)
-  buildfile = open("xml-templates/build-template.xml", "r").read().format(project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}", project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"))
+  buildfile = open("xml-templates/build-template.xml", "r").read().format(project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}", project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"), "yes" if VERBOSE else "no")
   srcdir = TEMPDIR.format(threadid)
   open(os.path.join(srcdir, "ivy.xml"), "w").write(ivyfile)
   open(os.path.join(srcdir, "build.xml"), "w").write(buildfile)
@@ -200,7 +233,6 @@ def TryCompile(trynumber, project, methods, threadid, output):
   except TimeoutExpired:
     return False, [{"error_type": "Timeout Expired"}]
   except Exception, e:
-    raise
     return False, [{"error_type": "python exception", "error": str(e)}], [], ""
 
 def CopyTarget(projectpath, threadid):
@@ -269,7 +301,7 @@ def Uncompress(comp_path, threadid):
   check_output(["chmod", "777", "-R", path])
   return path
 
-def CompileAndSave(threadid, projects, methods, root, outdir):
+def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
   save = shelve.open(PARTMAP.format(threadid))
   #projects = RemoveTouched(save, projects)
   i = 0
@@ -304,7 +336,7 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
       failtocopy = False
       
     except Exception, e:
-      print "Found Exception", e
+      #print "Found Exception", e
       continue
     srcdir = TEMPDIR.format(threadid)
     findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
@@ -316,11 +348,12 @@ def CompileAndSave(threadid, projects, methods, root, outdir):
     project["timing"].append(("end_copy_class_files", time.time()))
     SaveOutput(save, project, succ, output, outdir, command)
     project["timing"].append(("end_save_json", time.time()))
-    i+=1
-    if i % 10 == 0:
-      print "Thread " + str(threadid) + ": " + str(i)
+    reportq.put(succ)
+    #i+=1
+    #if i % 10 == 0:
+    #  print "Thread " + str(threadid) + ": " + str(i)
     project = projects.get()
-  print "Done with Thread ", threadid
+  #print "Done with Thread ", threadid
 #  CleanFolder(threadid)
 
 def ConsolidateOutput():
@@ -333,11 +366,14 @@ def ConsolidateOutput():
     if "depends" in data:
       for i in range(len(data["depends"])):
         a,b,c,d,e,f = data["depends"][i]        
-        data["depends"][i] = (a,b,c,d,e.encode("ascii", "xmlcharrefreplace"),f)
+        try:
+          data["depends"][i] = (a,b,c,d,e.encode("ascii", "xmlcharrefreplace"),f)
+        except UnicodeDecodeError:
+          data["depends"][i] = (a,b,c,d,"UNICDOE ERROR JAR",f)
     if "output" in data and len(data["output"]) > 0 and type(data["output"][0]) == type({}):
       for i in range(len(data["output"])):
         if data["output"][i]["error_type"] == "python exception":
-          print data["output"][i]["error"]
+          #print data["output"][i]["error"]
           data["output"][i]["error"] = repr(data["output"][i]["error"])
         if "error" in data["output"][i]:
           try:
@@ -349,20 +385,62 @@ def ConsolidateOutput():
   print "Writing json"
   return final
 
+def progress(count, succ, fail, total, suffix=''):
+  bar_len = 60
+  succ_filled_len = int(round(bar_len * succ / float(total)))
+  fail_filled_len = int(round(bar_len * fail / float(total)))
+  
+  percents = round(100.0 * count / float(total), 1)
+  bar = (bcolors.OKGREEN + ('|' * succ_filled_len) + bcolors.ENDC
+        + bcolors.WARNING + ('|' * fail_filled_len) + bcolors.ENDC
+        + ' ' * (bar_len - succ_filled_len - fail_filled_len))
+
+  sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
+  sys.stdout.flush()  # As suggested by Rom Ruben
+
+def progressbar(recordq, total):
+  print "TOTAL NUMBER OF PROJECTS TO COMPILE:", total
+  count = 0
+  succ = 0
+  fail = 0
+  start_t = time.time()
+  progress(0, 0, 0, total, suffix = "Initalizing Threads")
+  item = recordq.get()
+  while item != "DONE":
+    count += 1
+    if item:
+      succ += 1
+    else:
+      fail += 1
+    time_left = (total - count) * (time.time() - start_t) / count
+    hrs = time_left / 3600
+    strtime = "%d:%d:%d" % (time_left / 3600, (time_left % 3600) / 60, ((time_left % 3600) % 60))
+    
+    progress(count, succ, fail, total, suffix = "%d(%.1fper)PASS, %d Total, ETA: %s" % (succ, float(succ) * 100 /float(succ + fail), succ + fail, strtime))
+    item = recordq.get()
+  print "\n"
+
 def main(root, projects, outdir, methods,):
   processes = []
   p = Queue()
-  for proj in RemoveTouched(projects):
+  recordq = Queue()
+  for proj in RemoveTouched(projects, recordq):
     p.put(proj)
   for i in range(THREADCOUNT):
     p.put("DONE")
+  recorder = Thread(target = progressbar, args = (recordq, len(projects)))
+  recorder.daemon = True
+  recorder.start()
   for i in range(THREADCOUNT):
-    processes.append(Process(target = CompileAndSave, args = (i, p, methods, root, outdir)))
+    processes.append(Process(target = CompileAndSave, args = (i, p, methods, root, outdir, recordq)))
     processes[-1].daemon = True
     processes[-1].start()
+    time.sleep(0.5)
 
   for i in range(THREADCOUNT):
     processes[i].join()
+  recordq.put("DONE")
+  time.sleep(1)
   print "Done with all threads."
   return ConsolidateOutput()
 
@@ -376,7 +454,7 @@ def getProjects(root, infile):
     return [{"file": line[:-4], "path": os.path.join(root, line)} for line in open(infile).read().split("\n") if line]
 
 if __name__ == "__main__":
-  global THREADCOUNT, JAR_REPO
+  #global THREADCOUNT, JAR_REPO
   parser = argparse.ArgumentParser()
   parser.add_argument('-r', '--root', type=str, help ='The directory under which all the java projects to be compiled exist.')
   parser.add_argument('-f', '--file', type=str, default= "AUTOGEN", help ='The file with project paths to be build. Paths in file are considered relative to the root directory.')

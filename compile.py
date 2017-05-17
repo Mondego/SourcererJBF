@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sourcererjbf.compile_checker as cc
 import sourcererjbf.dependency_matcher as dm
+import sourcererjbf.fqn_to_jar_map_generator as ftjmg
 import os, json, argparse
 
 if __name__ == "__main__":
@@ -11,13 +12,17 @@ if __name__ == "__main__":
   parser.add_argument('-d', '--outfolder', default = "builds", type=str, help ='The directory under which all the output build directories will be put.')
   parser.add_argument('-o', '--output', default = "project_details.json", type=str, help ='An output file that will contain all the output information consolidated.')
   parser.add_argument('-j', '--jars', default="jars", type=str, help ='The root of the java repository')
-  parser.add_argument('-ftj', '--fqn_to_jar', default="fqn-to-jars.json", type=str, help ='The file that represents the mapping of fqn to jar in repository.')
+  parser.add_argument('-ftj', '--fqn_to_jar', default="fqn-to-jars.shelve", type=str, help ='The file that represents the mapping of fqn to jar in repository.')
   parser.add_argument('-t', '--threads', default=10, type=int, help ='The number of base threads to be run.')
   parser.add_argument('-tpb', '--try_project_build', action='store_true', help ='Use project build files first if it exists.')
+  parser.add_argument('-v', '--verbose', action='store_true', help ='Forces javac output to be verbose. Default False')
+  parser.add_argument('-opb', '--only_project_build', action='store_true', help ='Only use project build files.')
   args = parser.parse_args()
   root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
   cc.JAR_REPO = args.jars
-  if args.rebuild_from_scratch:
+  cc.VERBOSE = args.verbose
+  if args.rebuild_from_scratch and not args.only_project_build:
+    ftjmg.ROOT = args.jars
     dm.load_fqns(args.jars, args.fqn_to_jar, args.threads)
   if not os.path.exists("TBUILD"):
     os.makedirs("TBUILD") 
@@ -30,7 +35,10 @@ if __name__ == "__main__":
       projects.append(item)
   cc.make_dir(outdir, keep_old = True)
   if args.rebuild_from_scratch:
-    methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
+    if args.only_project_build:
+      methods = [cc.OwnBuild]
+    else:
+      methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
     open(outfile, "w").write(json.dumps(
         cc.main(root, projects, outdir, methods),
         sort_keys=True,

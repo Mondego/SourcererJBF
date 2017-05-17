@@ -9,6 +9,7 @@ import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
 from subprocess32 import check_output, call, CalledProcessError, STDOUT
 from utils import create_logger
+from zipfile import ZipFile
 
 NUMBER_OF_THREADS = 20
 logger = create_logger("fqn_to_jar")
@@ -37,9 +38,14 @@ def shortened(path):
 
 def get_all_fqns_from_path(path):
   all_paths = set()
-  for line in check_output(["jar", "tf", path], stderr = STDOUT).split("\n"):
+  try:
+    lines = ZipFile(path).namelist()
+  except Exception:
+    lines = check_output(["jar", "tf", path], stderr = STDOUT).split("\n")
+  for line in lines:
     if line.endswith(".class"):
-      all_paths.update(get_all_variations([p for p in line[:-6].split("$")[0].split("/") if p != ".." and p != "."]))
+      new_line = "/".join(l for l in line.strip()[:-6].split("$") if not re.match(r"\d+", l))
+      all_paths.update(get_all_variations([p for p in new_line.split("/") if p != ".." and p != "."]))
   return all_paths
 
 
@@ -105,14 +111,24 @@ def make_fqn_map(jar_locations, tc):
   logger.info("Starting reduce and invert")
   return invert(reducequeue())
   
+def save_to_shelve(savefile, fqn_map):
+  sh = shelve.open(savefile)
+  for fqn in fqn_map:
+    try:
+      sh[str(fqn)] = fqn_map[fqn]
+      sh.sync()
+    except UnicodeDecodeError:
+      print "Decode Exception when writing out fqn: ", fqn
+      continue
+  sh.close()
 
 def search_and_save(jarlocations, savefile, threads):
-  json.dump(
-      make_fqn_map(jarlocations, threads),
-      open(savefile, "w"),
-      sort_keys=True, 
-      indent=4, 
-      separators=(',', ': '))
+  save_to_shelve(savefile,
+      make_fqn_map(jarlocations, threads))
+      #open(savefile, "w"),
+      #sort_keys=True, 
+      #indent=4, 
+      #separators=(',', ': '))
 
 def get_locations_from_folder(location):
   try:
@@ -121,7 +137,7 @@ def get_locations_from_folder(location):
     print "Error when trying to find jars in folder", location
 
 if __name__ == "__main__":
-  global ROOT
+  #global ROOT
   if len(sys.argv) < 3:
     print "Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map> [<root>]"
     sys.exit(0)

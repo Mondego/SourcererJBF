@@ -5,13 +5,24 @@ errorre = re.compile("\[javac\]\s+(.*?):\d+:\s+error:\s+(.*)")
 rclasspublic = re.compile("class .*? is public, should be declared in a file named.*")
 rpackage = re.compile("package\s+(.*?)\s+does not exist")
 runmappable = re.compile("unmappable character for encoding\s+(.*)")
+#getpackage = re.compile("\[javac\]\s+import\s+(.*?);")
 
-def errortype(item):
+def errortype(error_info):
+  item = error_info["error"]
   if rpackage.match(item):
-    return {
+    getpackage = re.findall(rpackage.match(item).groups()[0].replace(".", "\\.") + r"\.[a-zA-Z0-9_\*]+", error_info["next_line"])
+    try:
+      return {
+        "error_type": "package not found",
+        #"package": getpackage.match(error_info["next_line"]).groups()[0] if getpackage.match(error_info["next_line"]) else rpackage.match(item).groups()[0]
+        "package": getpackage[0].rstrip("*").rstrip(".")
+      }
+    except Exception:
+      #print "NEXT LINE", error_info["next_line"], item
+      return { 
         "error_type": "package not found",
         "package": rpackage.match(item).groups()[0]
-    }
+      }
   elif rclasspublic.match(item):
     return { "error_type": "class should be in its own file." }
   elif runmappable.match(item):
@@ -120,16 +131,17 @@ def errortype(item):
     return { "error_type": item }
 
 def Categorize(output):
+  output_lines = output.split("\n")
   filtered_errors = [{
-            "filename": errorre.match(dline.strip()).groups()[0],
-            "error": errorre.match(dline.strip()).groups()[1]
-        } for dline in output.split("\n")
-        if errorre.match(dline.strip())
+            "filename": errorre.match(output_lines[i].strip()).groups()[0],
+            "error": errorre.match(output_lines[i].strip()).groups()[1],
+            "next_line": output_lines[i + 1].strip() if (i+1) < len(output_lines) else "EOF"
+        } for i in range(len(output_lines))
+        if errorre.match(output_lines[i].strip())
   ] if "impossible to resolve dependencies" not in output else [{
             "filename": "ivy.xml",
             "error": "unresolved dependencies"
   }]
   for i in range(len(filtered_errors)):
-    filtered_errors[i].update(errortype(filtered_errors[i]["error"]))
+    filtered_errors[i].update(errortype(filtered_errors[i]))
   return filtered_errors
-
