@@ -2,6 +2,7 @@ import sys, os
 import xml.etree.ElementTree as ET
 import zipfile
 from subprocess import check_output
+import logging
 
 # This function grabs a zip, searches for a pom.xml file, if it exists
 # downloads all the dependencies using maven to a ./target/dependencies
@@ -17,13 +18,29 @@ def get_maven_dependencies_from_zip(zip_path, working_dir = os.path.dirname(os.p
         break
 
     if pom_file is None:
+      logging.info('No pom.xml file on '+zip_path)
       sys.exit(0)
+
+    logging.info('pom.xml found for '+zip_path)
 
     with open(os.path.join(working_dir,'pom.xml'),'w') as file:
       file.write(z.read(pom_file))
 
   output = check_output(["mvn", "-f", working_dir, "dependency:copy-dependencies"])
-  print output
+
+  new_jars = 0
+  jar_already_existed = 0
+
+
+  for line in output.split('\n'):
+    if 'already exists in destination.' in line:
+      jar_already_existed += 1
+    else:
+      if '[INFO] Copying' in line:
+        new_jars += 1
+
+  logging.info(zip_path+' has ended with '+str(new_jars)+' new JARs and '+str(jar_already_existed)+' existing ones')
+    
 
 def get_dependencies(pom_path):
   tree = ET.parse(pom_path)
@@ -48,20 +65,33 @@ def get_dependencies(pom_path):
     print ('%s\t%s\t%s') % (groupId.text,artifactId.text,version.text) # artifactId.text + '\t' + version.text
 
 if __name__ == "__main__":
-
-  inputt = sys.argv[1]
-
-  working_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'dependenciesEnv')
+  working_dir = os.path.join(os.getcwd(),'dependenciesEnv')
+  print 'Working dir',working_dir
 
   # This code will need to be in the beginning of each subprocess
   if not os.path.isdir(working_dir):
     os.makedirs(working_dir)
-  else:
-    if os.path.isfile(os.path.join(working_dir,'pom.xml')):
-      os.remove(os.path.join(working_dir,'pom.xml'))
+  if os.path.isfile(os.path.join(working_dir,'pom.xml')):
+    os.remove(os.path.join(working_dir,'pom.xml'))
+  if os.path.isfile(os.path.join(working_dir,'LOG.log')):
+    print 'ERROR file',os.path.join(working_dir,'LOG.log'),'already exists'
+    sys.exit(1)
 
-  get_maven_dependencies_from_zip(inputt,working_dir)
-  
-  #print 'Reading pom:',pom_file
-  #get_dependencies(pom_file)
+  # Logging code
+  FORMAT = '[%(levelname)s] (%(threadName)s) %(message)s'
+  logging.basicConfig(level=logging.DEBUG,format=FORMAT)
+  file_handler = logging.FileHandler(os.path.join(working_dir,'LOG.log'))
+  file_handler.setFormatter(logging.Formatter(FORMAT))
+  logging.getLogger().addHandler(file_handler)
 
+  inputt = sys.argv[1]
+
+
+  with open(inputt,'r') as projects_path:
+    for path in projects_path:
+      logging.info('Reading '+path.strip())
+
+      get_maven_dependencies_from_zip(path.strip(),working_dir)
+
+    #print 'Reading pom:',pom_file
+    #get_dependencies(pom_file)
