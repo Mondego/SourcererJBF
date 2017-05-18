@@ -5,6 +5,8 @@ from subprocess import check_output
 import logging
 
 projects_abs_path = '' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
+JAR_FOLDER = 'JARS'
+EXTRACT_FOLDER = 'extractEnv'
 
 # This function grabs a zip, searches for a pom.xml file, if it exists
 # downloads all the dependencies using maven to a ./target/dependencies
@@ -25,16 +27,15 @@ def get_maven_dependencies_from_zip(zip_path, working_dir = os.path.dirname(os.p
 
     logging.info(pom_file+' found for '+zip_path)
 
-    z.extractall(working_dir)
+    z.extractall(os.path.join(working_dir,EXTRACT_FOLDER))
 
     #with open(os.path.join(working_dir,'pom.xml'),'w') as file:
     #  file.write(z.read(pom_file))
 
-  output = check_output(["mvn", "-f", os.path.join(working_dir,pom_file), "dependency:copy-dependencies"])
+  output = check_output(["mvn", "-f", os.path.join(working_dir,EXTRACT_FOLDER,pom_file), "dependency:copy-dependencies", "-DoutputDirectory="+os.path.join(working_dir,JAR_FOLDER)])
 
   new_jars = 0
   jar_already_existed = 0
-
 
   for line in output.split('\n'):
     if 'already exists in destination.' in line:
@@ -44,7 +45,9 @@ def get_maven_dependencies_from_zip(zip_path, working_dir = os.path.dirname(os.p
         new_jars += 1
 
   logging.info(zip_path+' has ended with '+str(new_jars)+' new JARs and '+str(jar_already_existed)+' existing ones')
-    
+  
+  # A little dirty but so is life
+  os.system('rm -rf '+os.path.join(working_dir,EXTRACT_FOLDER)+'/*')    
 
 def get_dependencies(pom_path):
   tree = ET.parse(pom_path)
@@ -75,6 +78,8 @@ if __name__ == "__main__":
   # This code will need to be in the beginning of each subprocess
   if not os.path.isdir(working_dir):
     os.makedirs(working_dir)
+    os.makedirs(os.path.join(working_dir,EXTRACT_FOLDER))
+    os.makedirs(os.path.join(working_dir,JAR_FOLDER))
   if os.path.isfile(os.path.join(working_dir,'pom.xml')):
     os.remove(os.path.join(working_dir,'pom.xml'))
   if os.path.isfile(os.path.join(working_dir,'LOG.log')):
