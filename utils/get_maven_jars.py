@@ -4,13 +4,15 @@ import zipfile
 from subprocess import check_output
 import logging
 
+projects_abs_path = '' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
+
 # This function grabs a zip, searches for a pom.xml file, if it exists
 # downloads all the dependencies using maven to a ./target/dependencies
 def get_maven_dependencies_from_zip(zip_path, working_dir = os.path.dirname(os.path.abspath(__file__))):
 
   pom_file = None
 
-  with zipfile.ZipFile(zip_path) as z:
+  with zipfile.ZipFile(os.path.join(projects_abs_path,zip_path)) as z:
     for line in z.namelist():
       line_strip = line.strip()
       if line_strip.endswith("pom.xml"):
@@ -21,12 +23,14 @@ def get_maven_dependencies_from_zip(zip_path, working_dir = os.path.dirname(os.p
       logging.info('No pom.xml file on '+zip_path)
       sys.exit(0)
 
-    logging.info('pom.xml found for '+zip_path)
+    logging.info(pom_file+' found for '+zip_path)
 
-    with open(os.path.join(working_dir,'pom.xml'),'w') as file:
-      file.write(z.read(pom_file))
+    z.extractall(working_dir)
 
-  output = check_output(["mvn", "-f", working_dir, "dependency:copy-dependencies"])
+    #with open(os.path.join(working_dir,'pom.xml'),'w') as file:
+    #  file.write(z.read(pom_file))
+
+  output = check_output(["mvn", "-f", os.path.join(working_dir,pom_file), "dependency:copy-dependencies"])
 
   new_jars = 0
   jar_already_existed = 0
