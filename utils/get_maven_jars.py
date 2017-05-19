@@ -8,12 +8,16 @@ import datetime as dt
 import time
 
 # If a path needs to be appended to the list of project paths
-projects_abs_path = '' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
+projects_abs_path = '/Users/pribeiro/Desktop/SourcererJBF' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
 
 JAR_FOLDER = 'JARS'
 EXTRACT_FOLDER = 'extractEnv'
 N_PROCESSES = 2
 PROJECTS_BATCH = 2
+TIMEOUT_MAVEM = 20 # seconds
+
+# List with projects that were already processed
+already_processed = set()
 
 # This function grabs a zip, searches for a pom.xml file, if it exists
 # downloads all the dependencies using maven to a ./target/dependencies
@@ -40,9 +44,10 @@ def get_maven_dependencies_from_zip(zip_path, process_num, logging, jar_folder, 
     #  file.write(z.read(pom_file))
   output = ''
   try:
-    output = check_output(["mvn", "dependency:copy-dependencies", "-DoutputDirectory="+jar_folder, "-f", os.path.join(extract_folder,pom_file)])
+    output = check_output(["timeout",str(TIMEOUT_MAVEM),"mvn", "dependency:copy-dependencies", "-DoutputDirectory="+jar_folder, "-f", os.path.join(extract_folder,pom_file)])
   except Exception as e:
     logging.info('Maven exception on '+zip_path)
+    return
 
   new_jars = 0
   jar_already_existed = 0
@@ -59,7 +64,7 @@ def get_maven_dependencies_from_zip(zip_path, process_num, logging, jar_folder, 
   # A little dirty, but so is life
   os.system('rm -rf '+os.path.join(extract_folder+'/*'))
 
-def process_projects(process_num, list_projects, global_queue, working_dir, jar_folder):
+def process_projects(process_num, list_projects, global_queue, working_dir, jar_folder, already_processed):
   extract_folder = os.path.join(working_dir,EXTRACT_FOLDER+str(process_num))
   if not os.path.isdir(extract_folder):
     os.makedirs(extract_folder)
@@ -76,10 +81,10 @@ def process_projects(process_num, list_projects, global_queue, working_dir, jar_
   #    logging.info('Reading '+path.strip())
 
   for proj in list_projects:
-    logging.info('Starting '+proj.strip())
-    get_maven_dependencies_from_zip(proj.strip(), process_num, logging, jar_folder, extract_folder)
+    if proj.strip() not in already_processed:
+      logging.info('Starting '+proj.strip())
+      get_maven_dependencies_from_zip(proj.strip(), process_num, logging, jar_folder, extract_folder)
 
-  time.sleep(2)
   global_queue.put(process_num)
   sys.exit(0)
 
@@ -106,7 +111,7 @@ def get_dependencies(pom_path):
     scope      = d.find("xmlns:scope",      namespaces=namespace)
     print ('%s\t%s\t%s') % (groupId.text,artifactId.text,version.text) # artifactId.text + '\t' + version.text
 
-def start_child(processes, global_queue, proj_paths, batch, working_dir, jar_folder):
+def start_child(processes, global_queue, proj_paths, batch, working_dir, jar_folder, already_processed):
   # This is a blocking get. If the queue is empty, it waits
   pid = global_queue.get()
   # OK, one of the processes finished. Let's get its data and kill it
@@ -117,7 +122,7 @@ def start_child(processes, global_queue, proj_paths, batch, working_dir, jar_fol
   del proj_paths[:batch]
 
   print "Starting new process %s" % (pid)
-  p = Process(name='Process '+str(pid), target=process_projects, args=(pid, paths_batch, global_queue, working_dir, jar_folder, ))
+  p = Process(name='Process '+str(pid), target=process_projects, args=(pid, paths_batch, global_queue, working_dir, jar_folder, already_processed, ))
   processes[pid] = p
   p.start()
 
@@ -133,6 +138,27 @@ def active_process_count(processes):
     if p != None:
       count +=1
   return count
+
+def read_processed_from_LOGS(working_dir):
+  paths = set()
+  for file in os.listdir(working_dir):
+    if file.endswith(".log"):
+      paths.add(os.path.join(working_dir, file))
+
+  already_processed = set()
+
+  if len(paths) > 0:
+    for l in paths:
+      with open(l,'r') as log:
+        for line in log:
+          if 'Starting' in line:
+            line_split = (line.strip()).split(' ')
+            already_processed.add(line_split[-1:][0])
+
+  for l in already_processed:
+    print l
+
+  return already_processed
 
 if __name__ == "__main__":
   p_start = dt.datetime.now()
@@ -152,6 +178,8 @@ if __name__ == "__main__":
   if not os.path.isdir(jar_folder):
     os.makedirs(jar_folder)
 
+  already_processed = read_processed_from_LOGS(os.path.join(working_dir,'LOGS'))
+
   proj_paths = []
   with open(sys.argv[1],'r') as f:
     for line in f:
@@ -170,7 +198,7 @@ if __name__ == "__main__":
   # Start all other projects
   print "*** Starting projects..."
   while len(proj_paths) > 0:
-    start_child(processes, global_queue, proj_paths, PROJECTS_BATCH, working_dir, jar_folder)
+    start_child(processes, global_queue, proj_paths, PROJECTS_BATCH, working_dir, jar_folder, already_processed)
 
   print "*** No more projects to process. Waiting for children to finish..."
   while active_process_count(processes) > 0:
