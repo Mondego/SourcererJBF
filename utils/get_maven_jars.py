@@ -7,6 +7,8 @@ from multiprocessing import Process, Value, Queue
 import datetime as dt
 import time
 from optparse import OptionParser
+from shutil import copyfile
+import hashlib
 
 # If a path needs to be appended to the list of project paths
 projects_abs_path = '' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
@@ -159,9 +161,6 @@ def read_processed_from_LOGS(list_LOG_dirs):
               line_split = (line.strip()).split(' ')
               already_processed.add(line_split[-1:][0])
 
-  #for l in already_processed:
-  #  print l
-
   return already_processed
 
 def get_existing_jars(jars_folder):
@@ -171,12 +170,29 @@ def get_existing_jars(jars_folder):
     for file in files:
       ext = os.path.splitext(file)[-1].lower()
       if ext == '.jar':
-        existing_jars.add(file)
+        h = hashlib.sha512(open(os.path.join(subdir,file),'rb').read()).hexdigest()
+        existing_jars.add(h)
 
   return existing_jars
 
 def copy_and_organize_jars(from_folder,to_folder,existing_jars):
-  return
+  total_jars = 0
+  copied_jars = 0
+
+  for subdir, dirs, files in os.walk(from_folder):
+    for file in files:
+      ext = os.path.splitext(file)[-1].lower()
+      if (ext == '.jar'):
+        total_jars += 1
+        h = hashlib.sha512(open(os.path.join(subdir,file),'rb').read()).hexdigest()
+        if h not in existing_jars:
+          copied_jars += 1
+          destination = os.path.join(to_folder,file[0])
+          if not os.path.isdir(destination):
+            os.makedirs(destination)
+            copyfile(os.path.join(subdir, file), os.path.join(destination, file))
+
+  return total_jars,copied_jars
 
 def yes_no():
   print """****** Maven scripts pose a SERIOUS THREAT to your system.
@@ -239,8 +255,8 @@ if __name__ == "__main__":
     else:
       p_start = dt.datetime.now()
       os.makedirs(local_folder)
-      copy_and_organize_jars(options.copyJars,local_folder,existing_jars)
-      print "*** All JAR files copied in %s" % (dt.datetime.now() - p_start)
+      total, copied = copy_and_organize_jars(options.copyJars,local_folder,existing_jars)
+      print "*** %s JAR files copied (out of %s total) in %s" % (copied, total, dt.datetime.now() - p_start)
       sys.exit(0)
 
   ## getMavenJars
