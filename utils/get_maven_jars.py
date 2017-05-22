@@ -6,14 +6,15 @@ import logging
 from multiprocessing import Process, Value, Queue
 import datetime as dt
 import time
+from optparse import OptionParser
 
 # If a path needs to be appended to the list of project paths
-projects_abs_path = '/Users/pribeiro/Desktop/SourcererJBF' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
+projects_abs_path = '' #'/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
 
 JAR_FOLDER = 'JARS'
 EXTRACT_FOLDER = 'extractEnv'
 N_PROCESSES = 2
-PROJECTS_BATCH = 2
+PROJECTS_BATCH = 5
 TIMEOUT_MAVEM = 20 # seconds
 
 # List with projects that were already processed
@@ -44,7 +45,8 @@ def get_maven_dependencies_from_zip(zip_path, process_num, logging, jar_folder, 
     #  file.write(z.read(pom_file))
   output = ''
   try:
-    output = check_output(["timeout",str(TIMEOUT_MAVEM),"mvn", "dependency:copy-dependencies", "-DoutputDirectory="+jar_folder, "-f", os.path.join(extract_folder,pom_file)])
+    #output = check_output(["timeout",str(TIMEOUT_MAVEM),"mvn", "dependency:copy-dependencies", "-DoutputDirectory="+jar_folder, "-f", os.path.join(extract_folder,pom_file)])
+    output = check_output(["mvn", "dependency:copy-dependencies", "-DoutputDirectory="+jar_folder, "-f", os.path.join(extract_folder,pom_file)])
   except Exception as e:
     logging.info('Maven exception on '+zip_path)
     return
@@ -139,74 +141,168 @@ def active_process_count(processes):
       count +=1
   return count
 
-def read_processed_from_LOGS(working_dir):
-  paths = set()
-  for file in os.listdir(working_dir):
-    if file.endswith(".log"):
-      paths.add(os.path.join(working_dir, file))
-
+def read_processed_from_LOGS(list_LOG_dirs):
   already_processed = set()
 
-  if len(paths) > 0:
-    for l in paths:
-      with open(l,'r') as log:
-        for line in log:
-          if 'Starting' in line:
-            line_split = (line.strip()).split(' ')
-            already_processed.add(line_split[-1:][0])
+  for log_dir in list_LOG_dirs:
+    paths = set()
 
-  for l in already_processed:
-    print l
+    for file in os.listdir(log_dir):
+      if file.endswith(".log"):
+        paths.add(os.path.join(log_dir, file))
+
+    if len(paths) > 0:
+      for l in paths:
+        with open(l,'r') as log:
+          for line in log:
+            if 'Starting' in line:
+              line_split = (line.strip()).split(' ')
+              already_processed.add(line_split[-1:][0])
+
+  #for l in already_processed:
+  #  print l
 
   return already_processed
 
+def get_existing_jars(jars_folder):
+  existing_jars = set()
+
+  for subdir, dirs, files in os.walk(jars_folder):
+    for file in files:
+      ext = os.path.splitext(file)[-1].lower()
+      if ext == '.jar':
+        existing_jars.add(file)
+
+  return existing_jars
+
+def copy_and_organize_jars(from_folder,to_folder,existing_jars):
+  return
+
+def yes_no():
+  print """****** Maven scripts pose a SERIOUS THREAT to your system.
+****** Make sure you understand the risk of running code from undisclosed sources.
+****** Containment through system access permissions is HIGHLY RECOMMENDED.
+****** Do you want to continue? [yes|something else]"""
+
+  while True:
+    choice = raw_input().lower()
+    if choice != "yes": #  sys.exit(0)
+      print 'Be safe!'
+      sys.exit(0)
+    else:
+      return
+
 if __name__ == "__main__":
-  p_start = dt.datetime.now()
 
-  # If someone wants to change the working dir later only has to direct
-  # STDIN to this var
-  working_dir = os.path.join(os.getcwd(),'dependenciesEnv')
-  print 'Working dir',working_dir
+  parser = OptionParser()
+  parser.add_option("-j", "--getMavenJars", dest="getMavenJars", type="string", default=False,
+                    help="Get Jar files by running 'mvn dependency:copy-dependencies' for each project where it applies. Argument is a list of project paths. Includes automatic detection of Maven information.")
 
-  # jar_folder is shared for all the processes, and is where all jars are downloaded to
-  # by maven
-  jar_folder = os.path.join(working_dir,JAR_FOLDER)
+  parser.add_option("-w", "--workingDirectory", dest="workingDir", type="string", default=False,
+                    help="[OPTIONAL] Set a directory where JAR files and LOGS will be saved to. Default is './dependenciesEnv/'.")
 
-  # This code will need to be in the beginning of each subprocess
+  parser.add_option("-l", "--logs", dest="logsDirs", type="string", default=False,
+                    help="[OPTIONAL] Comma-separated list of directories to look for log files of previous runs. The script will read the logs and resume execution.")
+
+  parser.add_option("-t", "--threads", dest="threadsCount", type="int", default=False,
+                    help="[OPTIONAL] Number of processes. Multiprocessing calls by maven is OUTSIDE the scope of this parameter so be advised. Default is 2.")
+
+  parser.add_option("-c", "--copyJars", dest="copyJars", type="string", default=False,
+                    help="Copies and organizes JAR files from this location to a local 'organized_jars' folder. If optional argument '-e' is passed, JAR files that already exist in '-e' directory will not be copied.")
+
+  parser.add_option("-e", "--existingJars", dest="existingJars", type="string", default=False,
+                    help="[OPTIONAL] JAR files in this directory will not be copied by '-j'.")
+
+  (options, args) = parser.parse_args()
+
+  if not len(sys.argv) > 1:
+    print "No arguments were passed. Try running with '--help'."
+    sys.exit(0)
+
+  if options.copyJars and options.getMavenJars:
+    print "Arguments '-c' and '-j' are not compatible. Try running with '--help'."
+    sys.exit(0)
+
+  #### ARGUMENTS HANDLING MUST BE below
+ 
+  ## existingJars
+  existing_jars = set()
+  if options.existingJars:
+    print 'Searching for existing JAR files in:',options.existingJars
+    existing_jars = get_existing_jars(options.existingJars)
+
+  ## copyJars
+  if options.copyJars:
+    local_folder = os.path.join(os.getcwd(),'organized_jars')
+    if os.path.isdir(local_folder):
+      print 'Folder',local_folder,'already exists.'
+    else:
+      p_start = dt.datetime.now()
+      os.makedirs(local_folder)
+      copy_and_organize_jars(options.copyJars,local_folder,existing_jars)
+      print "*** All JAR files copied in %s" % (dt.datetime.now() - p_start)
+      sys.exit(0)
+
+  ## getMavenJars
+  working_dir = ''
+  if options.workingDir:
+    print 'Working directory:',options.workingDir
+    working_dir = os.path.abspath(options.workingDir)
+  else:
+    working_dir = os.path.join(os.getcwd(),'dependenciesEnv')
   if not os.path.isdir(working_dir):
     os.makedirs(working_dir)
-  if not os.path.isdir(jar_folder):
-    os.makedirs(jar_folder)
 
-  already_processed = read_processed_from_LOGS(os.path.join(working_dir,'LOGS'))
+  ## logsDirs
+  already_processed = []
+  if options.logsDirs:
+    print 'Searching for existing logs in:',options.logsDirs.split(',')
+    already_processed = read_processed_from_LOGS(options.logsDirs.split(','))
 
-  proj_paths = []
-  with open(sys.argv[1],'r') as f:
-    for line in f:
-      proj_paths.append(line.strip())
+  ## threadsCount
+  if options.threadsCount:
+    print 'Number of threads:',options.threadsCount
+    N_PROCESSES = options.threadsCount
+
+  ## getMavenJars
+  if options.getMavenJars:
+    p_start = dt.datetime.now()
+    print 'Getting Maven JARs from:',options.getMavenJars
+
+    yes_no()
+
+    ## jar_folder is shared for all the processes, and is where all jars are downloaded to
+    jar_folder = os.path.join(working_dir,JAR_FOLDER)
+    print jar_folder
+    if not os.path.isdir(jar_folder):
+      os.makedirs(jar_folder)
+
+    proj_paths = []
+    with open(options.getMavenJars,'r') as f:
+      for line in f:
+        proj_paths.append(line.strip())
   
-  n_projects = len(proj_paths)
+    n_projects = len(proj_paths)
 
-  # Multiprocessing with N_PROCESSES
-  # [process, project_count]
-  processes = [None for i in xrange(N_PROCESSES)]
-  # The queue for processes to communicate back to the parent (this process)
-  global_queue = Queue()
-  for i in xrange(N_PROCESSES):
-    global_queue.put(i)
+    # Multiprocessing with N_PROCESSES
+    # [process, project_count]
+    processes = [None for i in xrange(N_PROCESSES)]
+    # The queue for processes to communicate back to the parent (this process)
+    global_queue = Queue()
+    for i in xrange(N_PROCESSES):
+      global_queue.put(i)
 
-  # Start all other projects
-  print "*** Starting projects..."
-  while len(proj_paths) > 0:
-    start_child(processes, global_queue, proj_paths, PROJECTS_BATCH, working_dir, jar_folder, already_processed)
+    # Start all other projects
+    #print "*** Starting projects..."
+    while len(proj_paths) > 0:
+      start_child(processes, global_queue, proj_paths, PROJECTS_BATCH, working_dir, jar_folder, already_processed)
 
-  print "*** No more projects to process. Waiting for children to finish..."
-  while active_process_count(processes) > 0:
-    pid = global_queue.get()
-    kill_child(processes, pid)
+    print "*** No more projects to process. Waiting for children to finish..."
+    while active_process_count(processes) > 0:
+      pid = global_queue.get()
+      kill_child(processes, pid)
 
-  p_elapsed = dt.datetime.now() - p_start
-  print "*** All done. %s projects in %s" % (n_projects, p_elapsed)
+    p_elapsed = dt.datetime.now() - p_start
+    print "*** All done. %s projects in %s" % (n_projects, p_elapsed)
+    sys.exit(0)
 
-    #print 'Reading pom:',pom_file
-    #get_dependencies(pom_file)
