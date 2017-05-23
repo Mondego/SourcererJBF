@@ -190,7 +190,7 @@ def copy_and_organize_jars(from_folder,to_folder,existing_jars):
           destination = os.path.join(to_folder,file[0])
           if not os.path.isdir(destination):
             os.makedirs(destination)
-            copyfile(os.path.join(subdir, file), os.path.join(destination, file))
+          copyfile(os.path.join(subdir, file), os.path.join(destination, file))
 
   return total_jars,copied_jars
 
