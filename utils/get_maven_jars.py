@@ -244,8 +244,10 @@ if __name__ == "__main__":
   ## existingJars
   existing_jars = set()
   if options.existingJars:
+  	p_start = dt.datetime.now()
     print 'Searching for existing JAR files in:',options.existingJars
     existing_jars = get_existing_jars(options.existingJars)
+    print '%s JAR files found in %s' % (len(existing_jars), dt.datetime.now() - p_start)
 
   ## copyJars
   if options.copyJars:
