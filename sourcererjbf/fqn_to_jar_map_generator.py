@@ -117,8 +117,8 @@ def save_to_shelve(savefile, fqn_map):
     try:
       sh[str(fqn)] = fqn_map[fqn]
       sh.sync()
-    except UnicodeDecodeError:
-      print "Decode Exception when writing out fqn: ", fqn
+    except Exception as e:
+      print "Exception (probably decoding) when writing out fqn: ",fqn,e
       continue
   sh.close()
 
