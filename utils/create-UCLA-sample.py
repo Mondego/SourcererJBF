@@ -34,17 +34,21 @@ def copy_jars(list_projects):
     tree = ET.parse(build_file)
     root = tree.getroot()
 
+    list_jars = set()
+
     for child in root.findall('target'):
       if child.get('name') == 'compile':
         for jars in child.find('javac').find('classpath').findall('pathelement'):
           if JARS_LOCATION in jars.get('path'):
-            origin    = jars.get('path')
-            dest_jar  = os.path.join(PATH_result_jars,origin[len(JARS_LOCATION):])
-            dest_path = os.path.dirname(dest_jar)
-            if not os.path.isdir(dest_path):
-              os.makedirs(dest_path)
+            list_jars.add(jars.get('path'))
 
-            copy2(origin,dest_jar)
+    for origin in list_jars:
+      dest_jar  = os.path.join(PATH_result_jars,origin[len(JARS_LOCATION):])
+      dest_path = os.path.dirname(dest_jar)
+      if not os.path.isdir(dest_path):
+        os.makedirs(dest_path)
+
+      copy2(origin,dest_jar)
 
 def yes_no():
   print """****** This scripts assumes that jar files are located at:
