@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
   yes_no()
 
-  #if os.path.isdir(PATH_result_projects) or os.path.isdir(PATH_result_jars) or os.path.isdir(PATH_result_builds):
-  #  print "Folders '%s', '%s' or '%s' already exist!" % (PATH_result_projects,PATH_result_jars,PATH_result_builds)
-  #  sys.exit(0)
+  if os.path.isdir(PATH_result_projects) or os.path.isdir(PATH_result_jars) or os.path.isdir(PATH_result_builds):
+    print "Folders '%s', '%s' or '%s' already exist!" % (PATH_result_projects,PATH_result_jars,PATH_result_builds)
+    sys.exit(0)
 
   if not len(sys.argv) > 1:
     print "No arguments were passed. Try running with '--help'."
