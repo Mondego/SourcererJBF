@@ -28,27 +28,33 @@ def copy_builds(list_projects,builds_dir):
     copytree(os.path.join(builds_dir,project),os.path.join(PATH_result_builds,project))
 
 def copy_jars(list_projects):
+  list_jars = set()
+
   for project in list_projects:
     build_file = os.path.join(PATH_result_builds,project[:-4],'custom_build_script','build.xml')
     
     tree = ET.parse(build_file)
     root = tree.getroot()
+    
+    try:
+      for child in root.findall('target'):
+        if child.get('name') == 'compile':
+          for jars in child.find('javac').find('classpath').findall('pathelement'):
+            if JARS_LOCATION in jars.get('path'):
+              list_jars.add(jars.get('path'))
+    except Exception as e:
+    	continue
+    	# print 'No JAR files found for',project
+  
+  print '%s JAR files being copied...' % (len(list_jars))
 
-    list_jars = set()
+  for origin in list_jars:
+    dest_jar  = os.path.join(PATH_result_jars,origin[len(JARS_LOCATION):])
+    dest_path = os.path.dirname(dest_jar)
+    if not os.path.isdir(dest_path):
+      os.makedirs(dest_path)
 
-    for child in root.findall('target'):
-      if child.get('name') == 'compile':
-        for jars in child.find('javac').find('classpath').findall('pathelement'):
-          if JARS_LOCATION in jars.get('path'):
-            list_jars.add(jars.get('path'))
-
-    for origin in list_jars:
-      dest_jar  = os.path.join(PATH_result_jars,origin[len(JARS_LOCATION):])
-      dest_path = os.path.dirname(dest_jar)
-      if not os.path.isdir(dest_path):
-        os.makedirs(dest_path)
-
-      copy2(origin,dest_jar)
+    copy2(origin,dest_jar)
 
 def yes_no():
   print """****** This scripts assumes that jar files are located at:
