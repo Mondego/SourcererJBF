@@ -9,13 +9,16 @@ JARS_LOCATION = '/extra/lopes1/mondego-data/jars/' # KEEP THE '/' in the end if 
 PATH_result_projects = 'sample/projects'
 PATH_result_jars     = 'sample/jars'
 PATH_result_builds   = 'sample/builds'
+PATH_original_builds = ''
 
 def copy_projects(list_projects,projects_dir):
   for project in list_projects:
+    if len(project.strip()) == 0:
+      continue
     path = os.path.join(PATH_result_projects,os.path.dirname(project))
     if not os.path.isdir(path):
       os.makedirs(path)
-
+    
     copy2(os.path.join(projects_dir,project),os.path.join(PATH_result_projects,project))
 
 def copy_builds(list_projects,builds_dir):
@@ -31,7 +34,7 @@ def copy_jars(list_projects):
   list_jars = set()
 
   for project in list_projects:
-    build_file = os.path.join(PATH_result_builds,project[:-4],'custom_build_script','build.xml')
+    build_file = os.path.join(PATH_original_builds,project[:-4],'custom_build_script','build.xml')
     
     tree = ET.parse(build_file)
     root = tree.getroot()
@@ -43,8 +46,8 @@ def copy_jars(list_projects):
             if JARS_LOCATION in jars.get('path'):
               list_jars.add(jars.get('path'))
     except Exception as e:
-    	continue
-    	# print 'No JAR files found for',project
+      continue
+      # print 'No JAR files found for',project
   
   print '%s JAR files being copied...' % (len(list_jars))
 
@@ -114,6 +117,7 @@ if __name__ == "__main__":
     sys.exit(0)
   else:
     builds_dir = options.builds
+    PATH_original_builds = options.builds
   
   print 'Copying projects ...'
   copy_projects(list_projects,projects_dir)
