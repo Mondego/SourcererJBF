@@ -1,8 +1,4 @@
-This package contains Java source code, under projects, and its corresponding bytecode, 
-under builds. There are 9145 projects, so not quite 10k, but close. 
-If you just need the bytecode, there is no need for further action. 
-If, however, you want to regenerate the bytecodes you need to run the script compile.py. 
-Read on.
+# JBF - the Java Build Framework
 
 REQUIREMENTS
 ==============
