@@ -1,7 +1,15 @@
 ## Scrips to analyse the results of JBF
 
 
-`1-source-code-scrapper.py` This should be the first thing to run
+`bytecode-analyzer.py` Goes through the resulting `*.class` files from JBF and finds:
+
+* The ones with a `main()`, and run them.
+
+* The ones with `junit` tests, and runs the tests.
+
+This script contains various variables that can be setup right in the beginning.
+
+Resulting are `csv` files with the header: `proj_name, n_class_files, reacheable_mains, with_junit, passed_junit` 
 
 
 Under construction.. please return soon.
