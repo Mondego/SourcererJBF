@@ -9,7 +9,8 @@ from subprocess import check_output, STDOUT, CalledProcessError
 # N_PROCESSES as best suits
 # Finally, simply run the script
 
-PROJECTS_DIR = os.path.abspath('/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/java-builds')
+PROJECTS_BUILDS_DIR = os.path.abspath('/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/java-builds')
+JARS_DIR = '/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/jars'
 OUTPUT_FILE = "bytecode-info-%s.csv"
 
 # Strings to search within method names and imports to find main and junit, respectively
@@ -37,6 +38,30 @@ def run_main(root_path, file_path):
     except CalledProcessError as ex:
         o = ex.output
     output = o.decode('utf-8')
+
+    return output
+
+
+# Finds reachable methods from main
+def reachable_methods_from_main(root_path, file_path):
+    # Example: 'java -cp .:lava-master/build/: -javaagent:wiretap.jar -Dwiretap.recorder=ReachableMethods com.golaszewski.lava.evaluate.REPL'
+    cmd_wiretap = 'java -cp .:%s: -javaagent:wiretap.jar -Dwiretap.recorder=ReachableMethods %s'
+
+    cmd_path = root_path[:root_path.find('/build/') + 7]
+    class_path = os.path.join(root_path, file_path)
+    class_path = class_path[class_path.find('/build/') + 7:-6].replace('/', '.')
+
+    cmd = cmd_wiretap % (cmd_path, class_path)
+    print(cmd)
+
+    try:
+        o = check_output(cmd, stderr=STDOUT, shell=True)
+        returncode = 0
+    except CalledProcessError as ex:
+        o = ex.output
+    output = o.decode('utf-8')
+
+    print(output)
 
     return output
 
@@ -104,6 +129,7 @@ def process(list_projs):
                         if main_methods:
                             # print('Has main:', full_filename)
                             reacheable_mains += 1
+                            res = reachable_methods_from_main(root, filename)
                             # res = run_main(root, filename)
                             # print(res)
 
@@ -139,9 +165,9 @@ def process(list_projs):
 
 if __name__ == '__main__':
     list_projects = []
-    for proj_folder in os.listdir(PROJECTS_DIR):
-        for proj in os.listdir(os.path.join(PROJECTS_DIR, proj_folder)):
-            full_proj_folder = os.path.join(os.path.join(PROJECTS_DIR, proj_folder), proj)
+    for proj_folder in os.listdir(PROJECTS_BUILDS_DIR):
+        for proj in os.listdir(os.path.join(PROJECTS_BUILDS_DIR, proj_folder)):
+            full_proj_folder = os.path.join(os.path.join(PROJECTS_BUILDS_DIR, proj_folder), proj)
             list_projects.append(full_proj_folder)
             print('Found', full_proj_folder, '...')
 
