@@ -5,6 +5,7 @@ from javatools import unpack_classfile
 from subprocess import check_output, STDOUT, CalledProcessError
 import json
 import shutil
+from zipfile import ZipFile
 
 # Set:
 # PROJECTS_BUILDS_DIR as builds/ output of JBF
@@ -16,12 +17,12 @@ PROJECTS_BUILDS_DIR = os.path.abspath('/Users/nhoca/Trabalho/auto-builds-paper/b
 # Need sources to grab local jar files
 PROJECTS_SOURCES_DIR = os.path.abspath('/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/java-projects')
 JARS_DIR = '/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/jars'
-N_PROCESSES = 1
+N_PROCESSES = 2
 
 #### SHOULD not need to touch anything below ####
-OUTPUT_FILE = 'bytecode-info-%s.csv'
 # Where all the OUTPUT_FILE's are written:
 OUTPUT_FOLDER = 'output'
+OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, 'bytecode-info-%s.csv')
 
 # Strings to search within method names and imports to find main and junit, respectively
 main_search_string = 'main'
@@ -70,7 +71,7 @@ def reachable_methods_from_main(root_path, file_path):
         o = ex.output
     output = o.decode('utf-8')
 
-    print(output)
+    # TODO look at wiretap output for number of reached methods, and return the value
 
     return output
 
@@ -106,22 +107,25 @@ def run_junit(root_path, file_path):
 
 
 # Returns java-ready, ':' separated list of full paths of jars
-def handle_dependencies(proj_path):
-    proj_zip_folder = None
+def handle_dependencies(proj_path, pid):
+    proj_zip_path = None
     jar_paths = list()
 
     with open(os.path.join(proj_path, 'build-result.json'), 'r') as file:
         json_file = json.load(file)
         for dep in json_file['depends']:
             if dep[5]:
-                if proj_zip_folder is None:
-                    proj_zip_folder = ''
-                print('Local:', os.path.join(proj_path, dep[4]))
+                if proj_zip_path is None:
+                    proj_zip_path = os.path.join(PROJECTS_SOURCES_DIR, json_file['file']+'.zip')
+                    # print(proj_zip_path)
+                with ZipFile(proj_zip_path, 'r') as proj_zip:
+                    proj_zip.extract(member=dep[4], path=pid)
+                    jar_paths.append(os.path.join(pid, dep[4]))
             else:
                 jar_paths.append(os.path.join(JARS_DIR, dep[4]))
 
-    print(jar_paths)
-    return jar_paths
+    # print(jar_paths)
+    return ':'.join(jar_paths)
 
 
 def process(list_projs):
@@ -140,13 +144,16 @@ def process(list_projs):
                 os.makedirs(str(pid))
             else:
                 raise Exception('Folder ' + str(pid) + ' already exists!')
-            jar_paths = handle_dependencies(full_proj_folder)
+            jar_paths = handle_dependencies(full_proj_folder, str(pid))
+            print(jar_paths)
 
             # These counts are class files/per project
             reacheable_mains = 0
             with_junit = 0
             passed_junit = 0
             n_class_files = 0
+
+            # TODO Verify all calls to measurements and make sure they work
 
             # # Search for Class files
             # for root, dirnames, filenames in os.walk(full_proj_folder):
@@ -184,6 +191,7 @@ def process(list_projs):
             #
             #             except:
             #                 continue
+            # shutil.rmtree(str(pid))
 
             result = full_proj_folder + ',' + str(n_class_files) + ',' + str(reacheable_mains) + ',' + str(
                 with_junit) + ',' + str(passed_junit)
@@ -195,14 +203,12 @@ def process(list_projs):
                 print('-----------------------------------------')
 
             output_file.write(result + '\n')
-            shutil.rmtree(str(pid))
+
 
 
 if __name__ == '__main__':
-    # if not os.path.exists(OUTPUT_FOLDER):
-    #     os.makedirs(OUTPUT_FOLDER)
-    # else:
-    #     raise Exception('Folder output/ already exists!')
+    if not os.path.exists(OUTPUT_FOLDER):
+         os.makedirs(OUTPUT_FOLDER)
 
     list_projects = []
     for proj_folder in os.listdir(PROJECTS_BUILDS_DIR):
