@@ -1,4 +1,5 @@
 import sys, os
+import logging
 import zipfile
 from multiprocessing import Process, Pool
 from javatools import unpack_classfile
@@ -23,12 +24,14 @@ N_PROCESSES = 2
 # Where all the OUTPUT_FILE's are written:
 OUTPUT_FOLDER = 'output'
 OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, 'bytecode-info-%s.csv')
+LOGS_PATH = 'logs'
 
 # Strings to search within method names and imports to find main and junit, respectively
 main_search_string = 'main'
 junit_search_string = 'junit'
 
 FILE_EXTENSIONS = ['.class']
+
 
 # TODO: Add logging to system calls
 
@@ -63,7 +66,7 @@ def reachable_methods_from_main(root_path, file_path, jar_paths):
     class_path = class_path[class_path.find('/build/') + 7:-6].replace('/', '.')
 
     cmd = cmd_wiretap % (cmd_path, jar_paths, class_path)
-    print(cmd)
+    logging.info(cmd)
 
     try:
         o = check_output(cmd, stderr=STDOUT, shell=True)
@@ -91,7 +94,7 @@ def all_junit_tests(root_path, file_path, jar_paths):
     class_path = class_path[class_path.find('/build/') + 7:-6].replace('/', '.')
 
     cmd = cmd_main % (cmd_path, jar_paths, class_path)
-    print(cmd)
+    logging.info(cmd)
 
     try:
         o = check_output(cmd, stderr=STDOUT, shell=True)
@@ -117,7 +120,7 @@ def handle_dependencies(proj_path, pid):
         for dep in json_file['depends']:
             if dep[5]:
                 if proj_zip_path is None:
-                    proj_zip_path = os.path.join(PROJECTS_SOURCES_DIR, json_file['file']+'.zip')
+                    proj_zip_path = os.path.join(PROJECTS_SOURCES_DIR, json_file['file'] + '.zip')
                     # print(proj_zip_path)
                 with ZipFile(proj_zip_path, 'r') as proj_zip:
                     proj_zip.extract(member=dep[4], path=pid)
@@ -129,9 +132,18 @@ def handle_dependencies(proj_path, pid):
     return ':'.join(jar_paths)
 
 
+# main call
 def process(list_projs):
     pid = os.getpid()
     print('Starting process', pid, '...')
+
+    # Logging code
+    FORMAT = '[%(levelname)s] (%(threadName)s) %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=FORMAT)
+    file_handler = logging.FileHandler(os.path.join(LOGS_PATH, 'LOG-' + str(pid) + '.log'))
+    file_handler.setFormatter(logging.Formatter(FORMAT))
+    logging.getLogger().addHandler(file_handler)
+
     proj_counter = 0
 
     with open(OUTPUT_FILE % pid, 'w') as output_file:
@@ -202,10 +214,12 @@ def process(list_projs):
             output_file.write(result + '\n')
 
 
-
 if __name__ == '__main__':
     if not os.path.exists(OUTPUT_FOLDER):
-         os.makedirs(OUTPUT_FOLDER)
+        os.makedirs(OUTPUT_FOLDER)
+
+    if not os.path.exists(LOGS_PATH):
+        os.makedirs(LOGS_PATH)
 
     list_projects = []
     for proj_folder in os.listdir(PROJECTS_BUILDS_DIR):
