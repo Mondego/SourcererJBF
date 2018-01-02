@@ -73,8 +73,8 @@ def reachable_methods_from_main(root_path, file_path, jar_paths):
     output = o.decode('utf-8')
 
     # TODO look at wiretap output for number of reached methods, and return the value
-
-    return output
+    print(output)
+    return 0
 
 
 # Returns True if all tests passed, False otherwise
@@ -172,7 +172,7 @@ def process(list_projs):
                             reachable_mains += 1
                             res = reachable_methods_from_main(root, filename, jar_paths)
                             # res = run_main(root, filename)
-                            print(res)
+                            reachable_methds += res
 
                         # Search for junit and run the respective class files
                         try:
