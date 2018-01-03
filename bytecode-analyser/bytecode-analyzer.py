@@ -1,12 +1,11 @@
 import sys, os
-import logging
-import zipfile
-from multiprocessing import Process, Pool
-from javatools import unpack_classfile
-from subprocess import check_output, STDOUT, CalledProcessError
 import json
 import shutil
+import logging
 from zipfile import ZipFile
+from javatools import unpack_classfile
+from multiprocessing import Process, Pool
+from subprocess import check_output, STDOUT, CalledProcessError
 
 # Set:
 # PROJECTS_BUILDS_DIR as builds/ output of JBF
@@ -151,6 +150,7 @@ def process(list_projs):
 
     proj_counter = 0
 
+    # TODO Make script start from a list of files intead of the results of JBF
     with open(OUTPUT_FILE % pid, 'w') as output_file:
         output_file.write('proj_name,n_class_files,reachable_mains,reachable_methods,with_junit,passed_junit\n')
 
