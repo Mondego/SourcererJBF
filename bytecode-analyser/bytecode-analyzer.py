@@ -33,8 +33,6 @@ junit_search_string = 'junit'
 FILE_EXTENSIONS = ['.class']
 
 
-# TODO: Add logging to system calls
-
 def run_main(root_path, file_path):
     # Example: 'java -cp .:lava-master/build/: com.golaszewski.lava.evaluate.REPL'
     cmd_main = 'java -cp .:%s: %s'
@@ -57,9 +55,12 @@ def run_main(root_path, file_path):
 
 
 # Finds reachable methods from main
-def reachable_methods_from_main(root_path, file_path, jar_paths):
+# TODO check with christian the strange behavior of wiretap
+def reachable_methods_from_main(root_path, file_path, jar_paths, pid):
+    temp_folder = pid + '-wiretap'
+
     # Example: 'java -cp .:lava-master/build/: -javaagent:wiretap.jar -Dwiretap.recorder=ReachableMethods com.golaszewski.lava.evaluate.REPL'
-    cmd_wiretap = 'java -cp .:%s:%s: -javaagent:wiretap.jar -Dwiretap.recorder=ReachableMethods %s'
+    cmd_wiretap = 'java -cp .:%s:%s: -javaagent:wiretap.jar -Dwiretap.outfolder=\"' + temp_folder + '\" -Dwiretap.recorder=ReachableMethods %s'
 
     cmd_path = root_path[:root_path.find('/build/') + 7]
     class_path = os.path.join(root_path, file_path)
@@ -75,9 +76,13 @@ def reachable_methods_from_main(root_path, file_path, jar_paths):
         o = ex.output
     output = o.decode('utf-8')
 
-    # TODO look at wiretap output for number of reached methods, and return the value
-    print(output)
-    return 0
+    print(cmd+'\n'+output)
+
+    total_reachable_methods = 0
+    with open(os.path.join(temp_folder, 'reachable.txt'), 'r') as reachable:
+        total_reachable_methods = len(reachable.readlines())
+    shutil.rmtree(temp_folder)
+    return total_reachable_methods
 
 
 # Returns True if all tests passed, False otherwise
@@ -147,7 +152,7 @@ def process(list_projs):
     proj_counter = 0
 
     with open(OUTPUT_FILE % pid, 'w') as output_file:
-        output_file.write('proj_name,n_class_files,reachable_mains,with_junit,passed_junit\n')
+        output_file.write('proj_name,n_class_files,reachable_mains,reachable_methods,with_junit,passed_junit\n')
 
         for full_proj_folder in list_projs:
             # print(full_proj_folder)
@@ -162,7 +167,7 @@ def process(list_projs):
 
             # These counts are class files/per project
             reachable_mains = 0
-            reachable_methds = 0  # Per class file with main() found
+            reachable_methods = 0  # Per class file with main() found
             with_junit = 0
             passed_junit = 0
             n_class_files = 0
@@ -182,9 +187,9 @@ def process(list_projs):
                         if main_methods:
                             # print('Has main:', full_filename)
                             reachable_mains += 1
-                            res = reachable_methods_from_main(root, filename, jar_paths)
+                            res = reachable_methods_from_main(root, filename, jar_paths, str(pid))
                             # res = run_main(root, filename)
-                            reachable_methds += res
+                            reachable_methods += res
 
                         # Search for junit and run the respective class files
                         try:
@@ -193,7 +198,7 @@ def process(list_projs):
                                 # print('Has junit:', full_filename)
 
                                 with_junit += 1
-                                res = all_junit_tests(root, filename, jar_paths)
+                                # res = all_junit_tests(root, filename, jar_paths)
 
                                 if res:
                                     # print('All tests OK!')
@@ -204,7 +209,7 @@ def process(list_projs):
             shutil.rmtree(str(pid))
 
             result = full_proj_folder + ',' + str(n_class_files) + ',' + str(reachable_mains) + ',' + str(
-                with_junit) + ',' + str(passed_junit)
+                reachable_methods) + ',' + str(with_junit) + ',' + str(passed_junit)
 
             if (proj_counter % 10) == 0:
                 print('-----------------------------------------')
