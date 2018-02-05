@@ -13,10 +13,10 @@ from subprocess import check_output, STDOUT, CalledProcessError
 # N_PROCESSES as best suits
 # Finally, simply run the script
 
-PROJECTS_BUILDS_DIR = os.path.abspath('/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/java-builds')
+PROJECTS_BUILDS_DIR = os.path.abspath('some-path/builds')
 # Need sources to grab local jar files
-PROJECTS_SOURCES_DIR = os.path.abspath('/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/java-projects')
-JARS_DIR = '/Users/nhoca/Trabalho/auto-builds-paper/bytecode-analysis/jars'
+PROJECTS_SOURCES_DIR = os.path.abspath('some-path/java-projects')
+JARS_DIR = 'some-path/jars'
 N_PROCESSES = 2
 
 #### SHOULD not need to touch anything below ####
@@ -119,18 +119,23 @@ def handle_dependencies(proj_path, pid):
     proj_zip_path = None
     jar_paths = list()
 
+    print(proj_path)
+
     with open(os.path.join(proj_path, 'build-result.json'), 'r') as file:
         json_file = json.load(file)
-        for dep in json_file['depends']:
-            if dep[5]:
-                if proj_zip_path is None:
-                    proj_zip_path = os.path.join(PROJECTS_SOURCES_DIR, json_file['file'] + '.zip')
-                    # print(proj_zip_path)
-                with ZipFile(proj_zip_path, 'r') as proj_zip:
-                    proj_zip.extract(member=dep[4], path=pid)
-                    jar_paths.append(os.path.join(pid, dep[4]))
-            else:
-                jar_paths.append(os.path.join(JARS_DIR, dep[4]))
+        if 'depends' in json_file:
+            for dep in json_file['depends']:
+                if dep[5]:
+                    if proj_zip_path is None:
+                        proj_zip_path = os.path.join(PROJECTS_SOURCES_DIR, json_file['file'] + '.zip')
+                        # print(proj_zip_path)
+                    with ZipFile(proj_zip_path, 'r') as proj_zip:
+                        proj_zip.extract(member=dep[4], path=pid)
+                        jar_paths.append(os.path.join(pid, dep[4]))
+                else:
+                    jar_paths.append(os.path.join(JARS_DIR, dep[4]))
+        else:
+            return ' '
 
     # print(jar_paths)
     return ':'.join(jar_paths)
@@ -179,20 +184,20 @@ def process(list_projs):
                         full_filename = os.path.join(root, filename)
                         # print('Analyzing file', full_filename)
 
-                        n_class_files += 1
-                        ci = unpack_classfile(full_filename)
-
-                        # Search for main methods and run the respective class files
-                        main_methods = main_search_string in [m.get_name() for m in ci.methods]
-                        if main_methods:
-                            # print('Has main:', full_filename)
-                            reachable_mains += 1
-                            res = reachable_methods_from_main(root, filename, jar_paths, str(pid))
-                            # res = run_main(root, filename)
-                            reachable_methods += res
-
-                        # Search for junit and run the respective class files
                         try:
+                            n_class_files += 1
+                            ci = unpack_classfile(full_filename)
+    
+                            # Search for main methods and run the respective class files
+                            main_methods = main_search_string in [m.get_name() for m in ci.methods]
+                            if main_methods:
+                                # print('Has main:', full_filename)
+                                reachable_mains += 1
+                                res = 0 # reachable_methods_from_main(root, filename, jar_paths, str(pid))
+                                # res = run_main(root, filename)
+                                reachable_methods += res
+    
+                            # Search for junit and run the respective class files
                             junit_imports = [m for m in ci.get_requires() if junit_search_string in m]
                             if len(junit_imports) > 0:
                                 # print('Has junit:', full_filename)
