@@ -9,7 +9,7 @@ import os, zipfile, shelve, shutil, json, sys, re, argparse, time, datetime
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
-
+import sourcererjbf.fqn_to_jar_map_generator as ftjmg
 import output_analyzer, encode_fixer, dependency_matcher
 
 from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
@@ -19,6 +19,8 @@ PATH_logs = "logs"
 JAR_REPO = ""
 VERBOSE = False
 ignore_projects = set()
+fqn_to_proj = dict()
+fqns = set()
 
 # Causes infinite loop
 def FindAll(output, error_type):
@@ -263,6 +265,9 @@ def SaveOutput(save, project, succ, output, outdir, command):
   #print type(project["file"]), type(project)
   save[project["file"]] = project
   save.sync()
+  #print(fqn_to_proj)
+  with open(os.path.join(outdir,"fqn_to_proj.json"), "w") as fp:
+    json.dump(fqn_to_proj, fp)
 
 def make_dir(outdir, keep_old = False):
   if os.path.exists(outdir):
@@ -341,6 +346,12 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
     srcdir = TEMPDIR.format(threadid)
     findjava = check_output(["find", srcdir, "-name", "*.java"], timeout = TIMEOUT_SECONDS)
     succ, output, buildfs, command = (TryCompile(0, project, methods, threadid, []) if not failtocopy else (False, [{"error_type": "Copy failure"}], [], "") if findjava != "" else (False, [{"error_type": "No Java Files"}], "", ""))
+    ownjars = [j for j in check_output(["find", srcdir, "-name", "*.jar"]).split("\n") if j != ""]
+    for j in ownjars:
+      fqns = ftjmg.get_all_fqns_from_path(j)
+    if succ:
+      for fqn in fqns:
+        fqn_to_proj.setdefault(fqn, []).append(project['file'])
     project["timing"].append(("end_all_compile", time.time()))
     #print succ, project["file"]
     #print "command: ", command
