@@ -8,7 +8,7 @@
 import os, zipfile, shelve, shutil, json, sys, re, argparse, time, datetime
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
-from subprocess32 import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
+from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
 
 import output_analyzer, encode_fixer, dependency_matcher
 

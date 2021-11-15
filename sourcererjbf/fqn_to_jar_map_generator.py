@@ -7,7 +7,7 @@
 
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
-from subprocess32 import  check_output, call, CalledProcessError, STDOUT
+from subprocess import  check_output, call, CalledProcessError, STDOUT
 from utils import create_logger
 from zipfile import ZipFile
 
