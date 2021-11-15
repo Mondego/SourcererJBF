@@ -1,4 +1,4 @@
-from utils import create_logger
+from .utils import create_logger
 
 PARTMAP = "TBUILD/project_compile_temp{0}.shelve"
 TEMPDIR = "TBUILD/BUILD_{0}/"
