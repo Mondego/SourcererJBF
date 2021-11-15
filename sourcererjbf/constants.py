@@ -1,8 +1,11 @@
 from utils import create_logger
+
 PARTMAP = "TBUILD/project_compile_temp{0}.shelve"
 TEMPDIR = "TBUILD/BUILD_{0}/"
 TIMEOUT_SECONDS = 1800
-#LOGGER = create_logger("COMPILE.log") 
+
+
+# LOGGER = create_logger("COMPILE.log")
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'

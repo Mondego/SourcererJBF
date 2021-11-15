@@ -75,7 +75,7 @@ def reachable_methods_from_main(root_path, file_path, jar_paths, pid):
         o = ex.output
     output = o.decode('utf-8')
 
-    print(cmd+'\n'+output)
+    print(cmd + '\n' + output)
 
     total_reachable_methods = 0
     with open(os.path.join(temp_folder, 'reachable.txt'), 'r') as reachable:
@@ -187,16 +187,16 @@ def process(list_projs):
                         try:
                             n_class_files += 1
                             ci = unpack_classfile(full_filename)
-    
+
                             # Search for main methods and run the respective class files
                             main_methods = main_search_string in [m.get_name() for m in ci.methods]
                             if main_methods:
                                 # print('Has main:', full_filename)
                                 reachable_mains += 1
-                                res = 0 # reachable_methods_from_main(root, filename, jar_paths, str(pid))
+                                res = 0  # reachable_methods_from_main(root, filename, jar_paths, str(pid))
                                 # res = run_main(root, filename)
                                 reachable_methods += res
-    
+
                             # Search for junit and run the respective class files
                             junit_imports = [m for m in ci.get_requires() if junit_search_string in m]
                             if len(junit_imports) > 0:
