@@ -10,7 +10,7 @@ from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
 
-import output_analyzer, encode_fixer, dependency_matcher
+from sourcererjbf import output_analyzer, encode_fixer, dependency_matcher
 
 from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
 
@@ -369,8 +369,8 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
         srcdir = TEMPDIR.format(threadid)
         findjava = check_output(["find", srcdir, "-name", "*.java"], timeout=TIMEOUT_SECONDS)
         succ, output, buildfs, command = (TryCompile(0, project, methods, threadid, []) if not failtocopy else (
-        False, [{"error_type": "Copy failure"}], [], "") if findjava != "" else (
-        False, [{"error_type": "No Java Files"}], "", ""))
+            False, [{"error_type": "Copy failure"}], [], "") if findjava != "" else (
+            False, [{"error_type": "No Java Files"}], "", ""))
         project["timing"].append(("end_all_compile", time.time()))
         # print succ, project["file"]
         # print "command: ", command
@@ -453,7 +453,7 @@ def progressbar(recordq, total):
         strtime = "%d:%d:%d" % (time_left / 3600, (time_left % 3600) / 60, ((time_left % 3600) % 60))
 
         progress(count, succ, fail, total, suffix="%d(%.1fper)PASS, %d Total, ETA: %s" % (
-        succ, float(succ) * 100 / float(succ + fail), succ + fail, strtime))
+            succ, float(succ) * 100 / float(succ + fail), succ + fail, strtime))
         item = recordq.get()
     print
     "\n"
