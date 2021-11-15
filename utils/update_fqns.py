@@ -21,7 +21,7 @@ def get_all_fqns_from_line(line):
     return all_paths
 
 
-# jar_details = json.load(open("jar_details.json"))
+jar_details = json.load(open("jar_details.json"))
 print
 "Loaded jar details"
 class_to_jarmap_full = dict()
