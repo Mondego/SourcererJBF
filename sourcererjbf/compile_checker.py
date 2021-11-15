@@ -12,7 +12,7 @@ from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PI
 
 from sourcererjbf import output_analyzer, encode_fixer, dependency_matcher
 
-from constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
+from .constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
 
 THREADCOUNT = 50
 PATH_logs = "logs"
