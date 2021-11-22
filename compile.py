@@ -9,9 +9,11 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--root', type=str,
                         help='The directory under which all the java projects to be compiled exist.')
     parser.add_argument('-b', '--rebuild_from_scratch', action='store_true',
-                        help='Rebuild the projects from scratch. Dependency rematching implies that all projects might not recompile successfully.')
+                        help='Rebuild the projects from scratch. Dependency rematching implies that all projects '
+                             'might not recompile successfully.')
     parser.add_argument('-f', '--file', type=str, default="AUTOGEN",
-                        help='The file with project paths to be build. Paths in file are considered relative to the root directory.')
+                        help='The file with project paths to be build. Paths in file are considered relative to the '
+                             'root directory.')
     parser.add_argument('-d', '--outfolder', default="builds", type=str,
                         help='The directory under which all the output build directories will be put.')
     parser.add_argument('-o', '--output', default="project_details.json", type=str,
