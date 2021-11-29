@@ -44,7 +44,7 @@ def run_main(root_path, file_path):
     print(cmd)
 
     try:
-        o = check_output(cmd, stderr=STDOUT, shell=True)
+        o = check_output(cmd, stderr=STDOUT, shell=True, encoding='utf8')
         returncode = 0
     except CalledProcessError as ex:
         o = ex.output

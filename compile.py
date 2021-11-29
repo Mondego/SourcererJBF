@@ -27,6 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', action='store_true', help='Forces javac output to be verbose. Default False')
     parser.add_argument('-opb', '--only_project_build', action='store_true', help='Only use project build files.')
     args = parser.parse_args()
+
     root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
     cc.JAR_REPO = args.jars
     cc.VERBOSE = args.verbose

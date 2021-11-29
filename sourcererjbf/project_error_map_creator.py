@@ -2,8 +2,7 @@ import json
 
 all_projs = json.load(open("project_success.json"))
 err_map = dict()
-print
-"START"
+print("START")
 c = 0
 for i in all_projs:
     if not all_projs[i]["success"]:
@@ -27,5 +26,4 @@ output.close()
 # json.dump(err_map, open("project_error_map.json", "w"), sort_keys = True, indent = 4, separators=(',', ': '))
 json.dump(dict((e, list(items)) for e, items in err_map.items()), open("project_error_map.json", "w"), sort_keys=True,
           indent=4, separators=(',', ': '))
-print
-"DONE"
+print("DONE")

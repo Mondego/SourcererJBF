@@ -13,18 +13,16 @@ def unzip(zipFilePath, destDir):
         zip_ref = zipfile.ZipFile(zipFilePath, 'r')
         zip_ref.extractall(destDir)
         zip_ref.close()
-        check_output(["chmod", "777", "-R", destDir])
-        print
-        'SUCCESS -', zipFilePath
+        check_output(["chmod", "777", "-R", destDir], encoding='utf8')
+        print('SUCCESS -', zipFilePath)
         return True
     except Exception as e:
-        print
-        'FAILURE -', zipFilePath, e
+        print('FAILURE -', zipFilePath, e)
 
 
 def search(folder):
     jars = []
-    all_jars = check_output(["find", folder, "-name", "*.jar"])
+    all_jars = check_output(["find", folder, "-name", "*.jar"], encoding='utf8')
     return all_jars.split("\n") if all_jars else []
 
 
@@ -48,8 +46,7 @@ def final_dest(jar):
         fullpath = os.path.join(muse_jars, copy_path)
         return fullpath, copy_path
     except Exception:
-        print
-        jar
+        print(jar)
         return "", ""
 
 
@@ -84,7 +81,7 @@ def dedupe(jars, sobj, project, tempfolder):
 
 
 def clean(folder):
-    call(["rm", "-r", "-f", folder])
+    call(["rm", "-r", "-f", folder], encoding='utf8')
     os.makedirs(folder)
 
 
@@ -100,8 +97,7 @@ def copy_jars(projects, tempfolder, sobj, record):
             clean(tempfolder)
         i += 1
         if i % 1000 == 0:
-            print
-            i, "/", len(projects)
+            print(i, "/", len(projects))
 
 
 def getProjects(infile):
@@ -114,8 +110,7 @@ def getProjects(infile):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print
-        "The right usage is ./jar_capture.py <File with paths>"
+        print("The right usage is ./jar_capture.py <File with paths>")
         sys.exit(0)
     infile = sys.argv[1]
     projects = getProjects(infile)

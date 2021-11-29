@@ -37,9 +37,6 @@ for proj_dir in dirsDepth3:
         # print 'F2S:',proj_dir
         f2s += 1
 
-print
-'In the first but no in the second:', not_found
-print
-'Success2Failure:', s2f
-print
-'Failure2Success:', f2s
+print('In the first but no in the second:', not_found)
+print('Success2Failure:', s2f)
+print('Failure2Success:', f2s)

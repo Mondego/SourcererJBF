@@ -16,21 +16,19 @@ def scrape(i, jars):
     for j in jars:
         count += 1
         if count % 100 == 0:
-            print
-            "THREAD", i, count, len(jars)
+            print("THREAD", i, count, len(jars))
         try:
             zf = zipfile.ZipFile(os.path.join(ROOT, j))
             saver[j] = zf.namelist()
             saver.sync()
         except Exception as e:
-            print
-            "There was exception.", e, j
+            print("There was exception.", e, j)
             try:
-                saver[j] = check_output(["jar", "tf", os.path.join(ROOT, j)], stderr=STDOUT).split("\n")
+                saver[j] = check_output(["jar", "tf", os.path.join(ROOT, j)], encoding='utf8', stderr=STDOUT).split(
+                    "\n")
                 saver.sync()
             except Exception as e:
-                print
-                "There was another exception.", e, j
+                print("There was another exception.", e, j)
 
 
 # for i in range(THREADCOUNT):

@@ -30,7 +30,7 @@ def TryNewBuild(project, threadid, output):
     project["create_build"] = True
     try:
         srcdir = TEMPDIR.format(threadid)
-        project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
+        project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"], encoding='utf8') != ""
     except CalledProcessError:
         project["has_own_build"] = False
     return True, output, project
@@ -40,7 +40,7 @@ def OwnBuild(project, threadid, output):
     # project["create_build"] = False
     try:
         srcdir = TEMPDIR.format(threadid)
-        ant_find = check_output(["find", srcdir, "-name", "build.xml"])
+        ant_find = check_output(["find", srcdir, "-name", "build.xml"], encoding='utf8')
         if ant_find != "":
             project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
             project["has_own_build"] = True
@@ -48,7 +48,7 @@ def OwnBuild(project, threadid, output):
             # print "ANT: ", project["path"]
             return True, output, project
 
-        mvn_find = check_output(["find", srcdir, "-name", "pom.xml"])
+        mvn_find = check_output(["find", srcdir, "-name", "pom.xml"], encoding='utf8')
         if mvn_find != "":
             project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
             project["has_own_build"] = True
@@ -56,7 +56,7 @@ def OwnBuild(project, threadid, output):
             # print "MVN: ", project["path"]
             return True, output, project
 
-        gradle_find = check_output(["find", srcdir, "-name", "build.gradle"])
+        gradle_find = check_output(["find", srcdir, "-name", "build.gradle"], encoding='utf8')
         if gradle_find != "":
             project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
             project["has_own_build"] = True
@@ -116,7 +116,7 @@ def Compile(threadid, generated_build, project):
             try:
                 command = " ".join(project["use_command"])
                 project["timing"].append(("start_build", time.time()))
-                output = check_output(project["use_command"], stderr=STDOUT, timeout=TIMEOUT_SECONDS)
+                output = check_output(project["use_command"], encoding='utf8', stderr=STDOUT, timeout=TIMEOUT_SECONDS)
                 project["timing"].append(("end_build", time.time()))
                 return True, output, command, ""
             except CalledProcessError as e:
@@ -125,7 +125,8 @@ def Compile(threadid, generated_build, project):
             try:
                 command = "ant -f build.xml compile"
                 project["timing"].append(("start_build", time.time()))
-                output = check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], stderr=STDOUT,
+                output = check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], encoding='utf8',
+                                      stderr=STDOUT,
                                       timeout=TIMEOUT_SECONDS)
                 project["timing"].append(("end_build", time.time()))
                 return True, output, command, ""
@@ -256,7 +257,7 @@ def TryCompile(trynumber, project, methods, threadid, output):
 
 def CopyTarget(projectpath, threadid):
     copyrecursively(projectpath, TEMPDIR.format(threadid))
-    check_output(["chmod", "-R", "+w", TEMPDIR.format(threadid)])
+    check_output(["chmod", "-R", "+w", TEMPDIR.format(threadid)], encoding='utf8')
 
 
 def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
@@ -265,8 +266,8 @@ def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
     dstpath2 = os.path.join(outdir, project["file"], "custom_build_script")
 
     if succ:
-        check_output(["mkdir", "-p", dstpath])
-    check_output(["mkdir", "-p", dstpath2])
+        check_output(["mkdir", "-p", dstpath], encoding='utf8')
+    check_output(["mkdir", "-p", dstpath2], encoding='utf8')
 
     if succ:
         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), dstpath)
@@ -278,7 +279,7 @@ def SaveOutput(save, project, succ, output, outdir, command):
     project.update({"success": succ, "output": output})
     project_path = os.path.join(outdir, project["file"])
     if not os.path.exists(project_path):
-        check_output(["mkdir", "-p", project_path])
+        check_output(["mkdir", "-p", project_path], encoding='utf8')
     json.dump(project, open(os.path.join(project_path, "build-result.json"), "w"), sort_keys=True, indent=4,
               separators=(",", ": "))
     open(os.path.join(project_path, "build.command"), "w").write(command)
@@ -302,7 +303,7 @@ def CleanFolder(threadid):
 
 def isAndroid(threadid):
     srcdir = TEMPDIR.format(threadid)
-    var = check_output(["find", srcdir, "-name", "AndroidManifest.xml"])
+    var = check_output(["find", srcdir, "-name", "AndroidManifest.xml"], encoding='utf8')
     if not var:
         return False
     else:
@@ -322,10 +323,10 @@ def Uncompress(comp_path, threadid):
     if not os.path.exists(path):
         make_dir("Uncompress/uncompressed_{0}".format(threadid))
     else:
-        check_output(["rm", "-rf", path])
+        check_output(["rm", "-rf", path], encoding='utf8')
         make_dir("Uncompress/uncompressed_{0}".format(threadid))
     unzip(comp_path, path)
-    check_output(["chmod", "777", "-R", path])
+    check_output(["chmod", "777", path], encoding='utf8')
     return path
 
 
@@ -367,7 +368,7 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
             # print "Found Exception", e
             continue
         srcdir = TEMPDIR.format(threadid)
-        findjava = check_output(["find", srcdir, "-name", "*.java"], timeout=TIMEOUT_SECONDS)
+        findjava = check_output(["find", srcdir, "-name", "*.java"], timeout=TIMEOUT_SECONDS, encoding='utf8')
         succ, output, buildfs, command = (TryCompile(0, project, methods, threadid, []) if not failtocopy else (
             False, [{"error_type": "Copy failure"}], [], "") if findjava != "" else (
             False, [{"error_type": "No Java Files"}], "", ""))
@@ -414,8 +415,7 @@ def ConsolidateOutput():
                         continue
 
         final[key] = data
-    print
-    "Writing json"
+    print("Writing json")
     return final
 
 
@@ -434,8 +434,7 @@ def progress(count, succ, fail, total, suffix=''):
 
 
 def progressbar(recordq, total):
-    print
-    "TOTAL NUMBER OF PROJECTS TO COMPILE:", total
+    print("TOTAL NUMBER OF PROJECTS TO COMPILE:", total)
     count = 0
     succ = 0
     fail = 0
@@ -455,8 +454,7 @@ def progressbar(recordq, total):
         progress(count, succ, fail, total, suffix="%d(%.1fper)PASS, %d Total, ETA: %s" % (
             succ, float(succ) * 100 / float(succ + fail), succ + fail, strtime))
         item = recordq.get()
-    print
-    "\n"
+    print("\n")
 
 
 def main(root, projects, outdir, methods, ):
@@ -480,8 +478,7 @@ def main(root, projects, outdir, methods, ):
         processes[i].join()
     recordq.put("DONE")
     time.sleep(1)
-    print
-    "Done with all threads."
+    print("Done with all threads.")
     return ConsolidateOutput()
 
 

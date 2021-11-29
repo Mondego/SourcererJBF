@@ -7,7 +7,7 @@
 
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
-from subprocess import  check_output, call, CalledProcessError, STDOUT
+from subprocess import check_output, call, CalledProcessError, STDOUT
 from .utils import create_logger
 from zipfile import ZipFile
 
@@ -46,7 +46,7 @@ def get_all_fqns_from_path(path):
     try:
         lines = ZipFile(path).namelist()
     except Exception:
-        lines = check_output(["jar", "tf", path], stderr=STDOUT).split("\n")
+        lines = check_output(["jar", "tf", path], encoding='utf8', stderr=STDOUT).split("\n")
     for line in lines:
         if line.endswith(".class"):
             new_line = "/".join(l for l in line.strip()[:-6].split("$") if not re.match(r"\d+", l))
@@ -64,7 +64,7 @@ def make_fqn_part(locations, threadid):
     for path in locations:
         bad = False
         try:
-            check_output(["jarsigner", "-verify", path])
+            check_output(["jarsigner", "-verify", path], encoding='utf8')
         except CalledProcessError as e:
             bad = "java.lang.SecurityException" in e.output
         if bad:
@@ -92,8 +92,7 @@ def reducequeue():
     jar_to_fqn = {}
     bad_jars = set()
     for i in range(NUMBER_OF_THREADS):
-        print
-        i
+        print(i)
         part = dict(shelve.open("save_" + str(i)))
         for item in part:
             jar_to_fqn.setdefault(item, set()).update(part[item])
@@ -127,8 +126,7 @@ def save_to_shelve(savefile, fqn_map):
             sh[str(fqn)] = fqn_map[fqn]
             sh.sync()
         except Exception as e:
-            print
-            "Exception (probably decoding) when writing out fqn: ", fqn, e
+            print("Exception (probably decoding) when writing out fqn: ", fqn, e)
             continue
     sh.close()
 
@@ -144,17 +142,16 @@ def search_and_save(jarlocations, savefile, threads):
 
 def get_locations_from_folder(location):
     try:
-        return check_output(["find", location, "-name", "*.jar"]).split("\n")
+        jar_path = check_output(["find", location, "-name", "*.jar"], encoding='utf8').strip().split("\n")
+        return jar_path
     except CalledProcessError:
-        print
-        "Error when trying to find jars in folder", location
+        print("Error when trying to find jars in folder", location)
 
 
 if __name__ == "__main__":
     # global ROOT
     if len(sys.argv) < 3:
-        print
-        "Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map> [<root>]"
+        print("Usage: ./fqn_to_jar_map_generator.py <file_with_jar_locations> <file_to_save_map> [<root>]")
         sys.exit(0)
     if len(sys.argv) == 4:
         ROOT = sys.argv[3]

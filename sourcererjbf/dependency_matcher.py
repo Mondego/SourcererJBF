@@ -24,8 +24,7 @@ def load_or_create(folderpath, filename, threads):
 
 
 def find_depends(packages, fqn_map, debug=False):
-    if debug: print
-    "Fqnmap length:", len(fqn_map)
+    if debug: print("Fqnmap length:", len(fqn_map))
     if len(packages) == 0:
         return True, []
     jar_to_fqn = {}
@@ -113,11 +112,11 @@ def copy_and_retrieve_path(depend_path):
 
 def find_and_scrape_jars(threadid, project):
     srcpath = TEMPDIR.format(threadid)
-    ownjars = [j for j in check_output(["find", srcpath, "-name", "*.jar"]).split("\n") if j != ""]
+    ownjars = [j for j in check_output(["find", srcpath, "-name", "*.jar"], encoding='utf8').split("\n") if j != ""]
     jar_to_fqn_map = dict()
     for j in ownjars:
         try:
-            check_output(["jarsigner", "-verify", j])
+            check_output(["jarsigner", "-verify", j], encoding='utf8')
         except CalledProcessError as e:
             if "java.lang.SecurityException" in e.output: continue
         try:
