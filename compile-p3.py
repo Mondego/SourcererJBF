@@ -1,8 +1,12 @@
 #!/usr/bin/env python
+import argparse
+import os
+
+import simplejson as json
+
 import sourcererjbf.compile_checker as cc
 import sourcererjbf.dependency_matcher as dm
 import sourcererjbf.fqn_to_jar_map_generator as ftjmg
-import os, json, argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -51,7 +55,7 @@ if __name__ == "__main__":
             methods = [cc.OwnBuild]
         else:
             methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [
-                cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
+                cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars, cc.FixMissingDeps]
         open(outfile, "w").write(json.dumps(
             cc.main(root, projects, outdir, methods),
             sort_keys=True,
@@ -63,6 +67,4 @@ if __name__ == "__main__":
         print(len([id for id in success_map if success_map[id]["success"]]), "built successfully from",
               len(success_map), "projects.")
 
-# /Users/mrhmisu/.m2/repository
-# /Users/mrhmisu/november-ubuntu/home/UCL-MS/ANTLR4-JS-Parser
-#
+

@@ -1,13 +1,13 @@
-import json, os, sys
+import os, sys
 
+import simplejson as json
 import pid as pid
 
 projects = [os.path.join(f1, f2) for f1 in os.listdir(sys.argv[2]) for f2 in os.listdir(os.path.join(sys.argv[2], f1))]
 try:
     pd = dict([(pid, json.load(open(os.path.join(sys.argv[2], pid, "build-result.json")))) for pid in projects])
 except Exception:
-    print
-    pid
+    print(pid)
 pd_new = dict((pid, pd[pid]) for pid in pd if "has_own_build" in pd[pid] and pd[pid]["has_own_build"])
 pd_old = dict((pid, json.load(open(os.path.join(sys.argv[1], pid, "build-result.json")))) for pid in pd_new)
 

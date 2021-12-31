@@ -1,5 +1,6 @@
 from subprocess import check_output
-import json, os, sys
+import os, sys
+import simplejson as json
 
 total = 0
 type1 = 0

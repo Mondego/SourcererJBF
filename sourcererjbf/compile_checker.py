@@ -5,7 +5,8 @@
 #
 # Usage: ./compile_checker.py -r <Root Directory>
 
-import os, zipfile, shelve, shutil, json, sys, re, argparse, time, datetime
+import os, zipfile, shelve, shutil, sys, re, argparse, time, datetime
+import simplejson as json
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
@@ -195,9 +196,13 @@ def MakeBuild(project, threadid):
         mavendepends = set([d for d in depends if d[3]])
         mavenline = "\n  ".join([d[4] for d in mavendepends])
         jardepends = depends - mavendepends
-        jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(
-            os.path.join("../..", JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode(
-                "utf-8", "xmlcharrefreplace")) for d in jardepends])
+
+        # ecoding won't work as d coming as a string not byte
+        # jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../.." ,JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
+        jarline = "\n        ".join(
+            ["<pathelement path=\"{0}\" />".format(os.path.join("/", JAR_REPO, d[4]) if not d[5] else d[4]) for d in
+             jardepends])
+
         if jarline or mavenline:
             if mavenline:
                 classpath += "\n      <classpath refid=\"default.classpath\" />"
@@ -512,7 +517,7 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--threads', default=10, type=int, help='The number of base threads to be run.')
     args = parser.parse_args()
     root, infile, outdir, outfile, THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
-    dependency_matcher.load_fqns(args.jars, args.fqn_to_jar)
+    dependency_matcher.load_fqns(args.jars, args.fqn_to_jar, args.threads)
     JAR_REPO = args.jars
     if not os.path.exists("TBUILD"):
         os.makedirs("TBUILD")

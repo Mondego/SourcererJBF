@@ -1,4 +1,5 @@
-import os, sys, json
+import os, sys
+import simplejson as json
 
 projects = [line[:-4] for line in open(sys.argv[2]).read().split("\n") if line] if len(sys.argv) == 3 else [
     os.path.join(f1, f2) for f1 in os.listdir(sys.argv[1]) for f2 in os.listdir(os.path.join(sys.argv[1], f1))]

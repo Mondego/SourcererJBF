@@ -1,7 +1,9 @@
-import json, os, shelve
+import os
+import shelve
 from shutil import copyfile
-from .constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS
 from subprocess import check_output, CalledProcessError
+
+from .constants import TEMPDIR
 from .fqn_to_jar_map_generator import get_all_fqns_from_path, invert
 from .fqn_to_jar_map_generator import get_locations_from_folder, search_and_save
 

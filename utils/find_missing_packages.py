@@ -1,5 +1,6 @@
 # usage python find_missing_packages.py fqn-to-jars.json project_details.json builds
-import json, sys
+import sys
+import simplejson as json
 
 fqn_map = json.load(open(sys.argv[1]))
 
