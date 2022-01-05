@@ -1,0 +1,9 @@
+project_details.json
+/builds
+/TBUILD
+/Uncompress
+badjars.txt
+badjars_*
+save_*
+fqn_to_jar.log
+fqn-to-jar-.shelve
