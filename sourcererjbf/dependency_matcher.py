@@ -1,3 +1,4 @@
+import configparser
 import os
 import shelve
 from shutil import copyfile
@@ -13,10 +14,19 @@ FOLDER_PATH = ""
 
 # KNOWN_JARS = json.load(open("known_jars.json"))
 
+
 def load_fqns(folderpath, filename, threads):
     global FQN_TO_JAR_MAP, FOLDER_PATH
-    FQN_TO_JAR_MAP = load_or_create(folderpath, filename, threads)
-    FOLDER_PATH = folderpath
+    load_or_create(folderpath, filename, threads)
+
+
+def get_fqn_jar_map_if_ont_exist():
+    config = configparser.ConfigParser()
+    config.read('jbf.config.txt')
+    fqn_to_jar_map_file = config.get('DEFAULT', 'fqn_to_jar')
+    thread = config.getint('DEFAULT', 'threads')
+    jar_repo_path = config.get('DEFAULT', 'jars')
+    return load_or_create(jar_repo_path, fqn_to_jar_map_file, thread)
 
 
 def load_or_create(folderpath, filename, threads):
@@ -47,6 +57,10 @@ def create_jar_depends(depends, local=list()):
 
 
 def FixDeps(threadid, packages, project):
+    global FQN_TO_JAR_MAP
+    if bool(FQN_TO_JAR_MAP):
+        FQN_TO_JAR_MAP = get_fqn_jar_map_if_ont_exist()
+
     not_present = [pkg for pkg in set(packages) if pkg not in FQN_TO_JAR_MAP]
     if len(not_present) > 0:
         project["packages_not_in_fqnmap"] = not_present
@@ -58,10 +72,15 @@ def FixDeps(threadid, packages, project):
 
     project["depends"] = create_jar_depends(depends)
     project["create_build"] = True
+    # FQN_TO_JAR_MAP.close()
     return True, project
 
 
 def FixDepsWithOwnJars(threadid, packages, project):
+    global FQN_TO_JAR_MAP
+    if (len(FQN_TO_JAR_MAP)) == 0:
+        FQN_TO_JAR_MAP = get_fqn_jar_map_if_ont_exist()
+
     local_fqn_map = find_and_scrape_jars(threadid, project)
     not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
     remaining = set()
