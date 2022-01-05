@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import configparser
 import os
 
 import simplejson as json
@@ -32,6 +33,20 @@ if __name__ == "__main__":
     parser.add_argument('-opb', '--only_project_build', action='store_true', help='Only use project build files.')
     args = parser.parse_args()
 
+    config = configparser.ConfigParser()
+    config.read('jbf.config.txt')
+    args.root = config.get('DEFAULT', 'root')
+    args.rebuild_from_scratch = config.getboolean('DEFAULT', 'rebuild_from_scratch')
+    args.file = config.get('DEFAULT', 'file')
+    args.outfolder = config.get('DEFAULT', 'outfolder')
+    args.output = config.get('DEFAULT', 'output')
+    args.jars = config.get('DEFAULT', 'jars')
+    args.fqn_to_jar = config.get('DEFAULT', 'fqn_to_jar')
+    args.threads = config.getint('DEFAULT', 'threads')
+    args.try_project_build = config.getboolean('DEFAULT', 'try_project_build')
+    args.verbose = config.getboolean('DEFAULT', 'verbose')
+    args.only_project_build = config.getboolean('DEFAULT', 'only_project_build')
+
     root, infile, outdir, outfile, cc.THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
     cc.JAR_REPO = args.jars
     cc.VERBOSE = args.verbose
@@ -54,8 +69,9 @@ if __name__ == "__main__":
         if args.only_project_build:
             methods = [cc.OwnBuild]
         else:
-            methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [
-                cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars, cc.FixMissingDeps]
+            methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps,
+                       cc.FixMissingDepsWithOwnJars] if args.try_project_build else [
+                cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps, cc.FixMissingDepsWithOwnJars]
         open(outfile, "w").write(json.dumps(
             cc.main(root, projects, outdir, methods),
             sort_keys=True,
@@ -66,5 +82,3 @@ if __name__ == "__main__":
         success_map = cc.main(root, projects, outdir, methods)
         print(len([id for id in success_map if success_map[id]["success"]]), "built successfully from",
               len(success_map), "projects.")
-
-
