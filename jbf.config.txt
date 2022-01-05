@@ -1,0 +1,12 @@
+[DEFAULT]
+root = /Users/mrhmisu/previous-pc/ubuntu/projects
+rebuild_from_scratch = True
+file = AUTOGEN
+outfolder = builds
+output = project_details.json
+jars =/Users/mrhmisu/previous-pc/ubuntu/jars
+fqn_to_jar = fqn-to-jars.shelve
+threads = 5
+try_project_build = True
+verbose = False
+only_project_build = false
