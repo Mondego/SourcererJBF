@@ -20,7 +20,7 @@ def load_fqns(folderpath, filename, threads):
     load_or_create(folderpath, filename, threads)
 
 
-def get_fqn_jar_map_if_ont_exist():
+def get_fqn_jar_map():
     config = configparser.ConfigParser()
     config.read('jbf.config.txt')
     fqn_to_jar_map_file = config.get('DEFAULT', 'fqn_to_jar')
@@ -59,7 +59,7 @@ def create_jar_depends(depends, local=list()):
 def FixDeps(threadid, packages, project):
     global FQN_TO_JAR_MAP
     if bool(FQN_TO_JAR_MAP):
-        FQN_TO_JAR_MAP = get_fqn_jar_map_if_ont_exist()
+        FQN_TO_JAR_MAP = get_fqn_jar_map()
 
     not_present = [pkg for pkg in set(packages) if pkg not in FQN_TO_JAR_MAP]
     if len(not_present) > 0:
@@ -79,7 +79,7 @@ def FixDeps(threadid, packages, project):
 def FixDepsWithOwnJars(threadid, packages, project):
     global FQN_TO_JAR_MAP
     if (len(FQN_TO_JAR_MAP)) == 0:
-        FQN_TO_JAR_MAP = get_fqn_jar_map_if_ont_exist()
+        FQN_TO_JAR_MAP = get_fqn_jar_map()
 
     local_fqn_map = find_and_scrape_jars(threadid, project)
     not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
