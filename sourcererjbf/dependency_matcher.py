@@ -58,7 +58,7 @@ def create_jar_depends(depends, local=list()):
 
 def FixDeps(threadid, packages, project):
     global FQN_TO_JAR_MAP
-    if bool(FQN_TO_JAR_MAP):
+    if not bool(FQN_TO_JAR_MAP):
         FQN_TO_JAR_MAP = get_fqn_jar_map()
 
     not_present = [pkg for pkg in set(packages) if pkg not in FQN_TO_JAR_MAP]
@@ -78,7 +78,7 @@ def FixDeps(threadid, packages, project):
 
 def FixDepsWithOwnJars(threadid, packages, project):
     global FQN_TO_JAR_MAP
-    if (len(FQN_TO_JAR_MAP)) == 0:
+    if not bool(FQN_TO_JAR_MAP):
         FQN_TO_JAR_MAP = get_fqn_jar_map()
 
     local_fqn_map = find_and_scrape_jars(threadid, project)

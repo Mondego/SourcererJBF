@@ -2,11 +2,11 @@
 root = /Users/mrhmisu/previous-pc/ubuntu/projects
 rebuild_from_scratch = True
 file = AUTOGEN
-outfolder = builds
+outfolder = /Users/mrhmisu/previous-pc/ubuntu/builds/
 output = project_details.json
 jars =/Users/mrhmisu/previous-pc/ubuntu/jars
 fqn_to_jar = fqn-to-jars.shelve
-threads = 5
+threads = 1
 try_project_build = True
 verbose = False
-only_project_build = false
+only_project_build = False

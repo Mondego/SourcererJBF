@@ -69,9 +69,8 @@ if __name__ == "__main__":
         if args.only_project_build:
             methods = [cc.OwnBuild]
         else:
-            methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps,
-                       cc.FixMissingDepsWithOwnJars] if args.try_project_build else [
-                cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps, cc.FixMissingDepsWithOwnJars]
+            methods = [cc.OwnBuild, cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDeps] if args.try_project_build else [
+                cc.TryNewBuild, cc.EncodeFix, cc.FixMissingDepsWithOwnJars]
         open(outfile, "w").write(json.dumps(
             cc.main(root, projects, outdir, methods),
             sort_keys=True,
