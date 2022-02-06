@@ -13,4 +13,6 @@ projects/*
 badjars*
 .idea
 venv
-
+# System Files
+.DS_Store
+Thumbs.db

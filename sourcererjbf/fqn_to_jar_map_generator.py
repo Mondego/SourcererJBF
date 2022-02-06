@@ -8,7 +8,7 @@
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
 from subprocess import check_output, call, CalledProcessError, STDOUT
-from .utils import create_logger
+from utility import create_logger
 from zipfile import ZipFile
 
 NUMBER_OF_THREADS = 20
@@ -124,6 +124,7 @@ def save_to_shelve(savefile, fqn_map):
     for fqn in fqn_map:
         try:
             sh[str(fqn)] = fqn_map[fqn]
+            print(sh[str(fqn)])
             sh.sync()
         except Exception as e:
             print("Exception (probably decoding) when writing out fqn: ", fqn, e)
@@ -155,4 +156,10 @@ if __name__ == "__main__":
         sys.exit(0)
     if len(sys.argv) == 4:
         ROOT = sys.argv[3]
-    search_and_save(read_jar_locations(sys.argv[1]), sys.argv[2], NUMBER_OF_THREADS)
+    # search_and_save(read_jar_locations(sys.argv[1]), sys.argv[2], NUMBER_OF_THREADS)
+    # search_and_save(sys.argv[1], sys.argv[2], NUMBER_OF_THREADS)
+    folder_path = sys.argv[1]
+    filename = sys.argv[2]
+    threads = int(sys.argv[3])
+    search_and_save(get_locations_from_folder(folder_path), filename, threads)
+    print("Done Map building in the path: " + folder_path)
