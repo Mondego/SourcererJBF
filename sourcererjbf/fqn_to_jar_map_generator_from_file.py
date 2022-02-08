@@ -151,6 +151,11 @@ def get_locations_from_folder(location):
         print("Error when trying to find jars in folder", location)
 
 
+def get_locations_from_file(file_path):
+    with open(file_path) as f:
+        lines = f.readlines()
+        return lines
+
 
 if __name__ == "__main__":
     # global ROOT
@@ -161,8 +166,8 @@ if __name__ == "__main__":
         ROOT = sys.argv[3]
     # search_and_save(read_jar_locations(sys.argv[1]), sys.argv[2], NUMBER_OF_THREADS)
     # search_and_save(sys.argv[1], sys.argv[2], NUMBER_OF_THREADS)
-    folder_path = sys.argv[1]
+    file_path = sys.argv[1]
     filename = sys.argv[2]
     threads = int(sys.argv[3])
-    search_and_save(get_locations_from_folder(folder_path), filename, threads)
-    print("Done Map building in the path: " + folder_path)
+    search_and_save(get_locations_from_file(file_path), filename, threads)
+    print("Done Map building in the path: " + file_path)
