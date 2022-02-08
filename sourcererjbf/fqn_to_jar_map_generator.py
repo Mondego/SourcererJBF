@@ -7,7 +7,7 @@
 
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
-from subprocess import check_output, call, CalledProcessError, STDOUT
+from subprocess import check_output, run, call, CalledProcessError, STDOUT, PIPE
 from utility import create_logger
 from zipfile import ZipFile
 
@@ -143,7 +143,9 @@ def search_and_save(jarlocations, savefile, threads):
 
 def get_locations_from_folder(location):
     try:
-        jar_path = check_output(["find", location, "-name", "*.jar"], encoding='utf8').strip().split("\n")
+        # jar_path = run(["find", location, "-name", "*.jar"], encoding='utf8').strip().split("\n")
+        jar_path = run(["find", location, "-name", "*.jar"], encoding='utf8', check=True,
+                       stdout=PIPE).stdout.strip().split("\n")
         return jar_path
     except CalledProcessError:
         print("Error when trying to find jars in folder", location)
