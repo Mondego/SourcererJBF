@@ -44,9 +44,13 @@ def shortened(path):
 def get_all_fqns_from_path(path):
     all_paths = set()
     try:
+        print("Processing Jars...: " + path)
         lines = ZipFile(path).namelist()
     except Exception:
-        lines = check_output(["jar", "tf", path], encoding='utf8', stderr=STDOUT).split("\n")
+        # lines = check_output(["jar", "tf", path], encoding='utf8', stderr=STDOUT).split("\n")
+        lines = run(["jar", "tf", path], encoding='utf8', check=True,
+                    stdout=PIPE).stdout.strip().split("\n")
+
     for line in lines:
         if line.endswith(".class"):
             new_line = "/".join(l for l in line.strip()[:-6].split("$") if not re.match(r"\d+", l))
@@ -153,7 +157,7 @@ def get_locations_from_folder(location):
 
 def get_locations_from_file(file_path):
     with open(file_path) as f:
-        lines = f.readlines()
+        lines = f.read().splitlines()
         return lines
 
 
