@@ -47,9 +47,7 @@ def get_all_fqns_from_path(path):
         print("Processing Jars...: " + path)
         lines = ZipFile(path).namelist()
     except Exception:
-        # lines = check_output(["jar", "tf", path], encoding='utf8', stderr=STDOUT).split("\n")
-        lines = run(["jar", "tf", path], encoding='utf8', check=True,
-                    stdout=PIPE).stdout.strip().split("\n")
+        lines = check_output(["jar", "tf", path], encoding='utf8', stderr=STDOUT).split("\n")
 
     for line in lines:
         if line.endswith(".class"):
