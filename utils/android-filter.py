@@ -4,20 +4,19 @@ import zipfile
 from subprocess import check_output, run, call, CalledProcessError, STDOUT, PIPE
 from multiprocessing import Process, Queue
 
-# this script, extract a zip file into a temp directory, search for AndroidManifest
-# if found moved that zip into a destination directory
+# This script, extracts a zip file into a temp directory, searches for AndroidManifest.xml
+# If found moved that zip into a destination directory
 
 NUMBER_OF_THREADS = 10
-REPO_COUNT = 0
 
 
-def create_subprocess_of_android_filtering(project_location, unzip_path, moved_path, tc):
+def create_subprocess_of_android_filtering(repo_location, unzip_path, moved_path, tc):
     global NUMBER_OF_THREADS
     NUMBER_OF_THREADS = tc
     threads = []
     for i in range(NUMBER_OF_THREADS):
         threads.append(Process(target=search_android_repository,
-                               args=(project_location[i::NUMBER_OF_THREADS], unzip_path, moved_path, i)))
+                               args=(repo_location[i::NUMBER_OF_THREADS], unzip_path, moved_path, i)))
         threads[-1].daemon = True
         threads[-1].start()
 
@@ -68,11 +67,8 @@ def clean_unzip_dir(folder):
 
 
 def filter_android_repository(zip_path, unzip_path, moved_dir, tc):
-    global REPO_COUNT
     try:
-        REPO_COUNT += 1
         print("Processing. started..." + zip_path + "by the Thread: " + str(tc))
-        print("Repo count....." + str(REPO_COUNT))
         if unzip_repository(zip_path, unzip_path):
             if is_android_repository(unzip_path):
                 if move_repository(zip_path, moved_dir):
@@ -104,7 +100,7 @@ def search_android_repository(zip_locations, unzip_path, moved_dir, tc):
 if __name__ == '__main__':
 
     if len(sys.argv) < 5:
-        print("Usage: ./android-filter.py <file_with_zip_locations> <unzip_dir_path> <moved_dir_path> <threads>")
+        print("Usage: ./android-filter.py <file_with_zip_locations> <temp_unzip_dir_path> <moved_dir_path> <threads>")
         sys.exit(0)
     if len(sys.argv) == 5:
         zip_file_paths = sys.argv[1]
