@@ -91,7 +91,6 @@ def copy_jars(projects, unzip_dir_path, sobj, record, tc):
     i = 0
     temp_folder = unzip_dir_path + "/" + "dir_" + str(tc)
     clean(temp_folder)
-    check_output(["mkdir", temp_folder], encoding='utf8')
     for project in projects:
         if not os.path.isfile(project):
             continue
