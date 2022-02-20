@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 import os
-from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE
 import sys
 import shelve
 from shutil import copyfile
 import hashlib
 import zipfile
+from subprocess import check_output, run, call, CalledProcessError, STDOUT, PIPE
+from multiprocessing import Process, Queue
+
+NUMBER_OF_THREADS = 20
 
 
 def unzip(zipFilePath, destDir):
@@ -13,7 +16,7 @@ def unzip(zipFilePath, destDir):
         zip_ref = zipfile.ZipFile(zipFilePath, 'r')
         zip_ref.extractall(destDir)
         zip_ref.close()
-        check_output(["chmod", "777", destDir], encoding='utf8')
+        check_output(["chmod", "777", "-R", destDir], encoding='utf8')
         print('SUCCESS -', zipFilePath)
         return True
     except Exception as e:
@@ -84,18 +87,20 @@ def clean(folder):
     os.makedirs(folder)
 
 
-def copy_jars(projects, tempfolder, sobj, record):
+def copy_jars(projects, unzip_dir_path, sobj, record, tc):
     i = 0
-    clean(tempfolder)
+    temp_folder = unzip_dir_path + "/" + "dir_" + str(tc)
+    clean(temp_folder)
+    check_output(["mkdir", temp_folder], encoding='utf8')
     for project in projects:
         if not os.path.isfile(project):
             continue
-        res = unzip(project, tempfolder)
+        res = unzip(project, temp_folder)
         if True:
-            save_and_record(record, dedupe(search(tempfolder), sobj, project, tempfolder), project, tempfolder)
-            clean(tempfolder)
+            save_and_record(record, dedupe(search(temp_folder), sobj, project, temp_folder), project, temp_folder)
+            clean(temp_folder)
         i += 1
-        if i % 1000 == 0:
+        if i % 100 == 0:
             print(i, "/", len(projects))
 
 
@@ -107,13 +112,29 @@ def getProjects(infile):
     return res
 
 
+def create_subprocess_of_jar_capturing(projects, unzip_dir_path, sobj, record, tc):
+    global NUMBER_OF_THREADS
+    NUMBER_OF_THREADS = tc
+    threads = []
+    for i in range(NUMBER_OF_THREADS):
+        threads.append(Process(target=copy_jars,
+                               args=(projects[i::NUMBER_OF_THREADS], unzip_dir_path, sobj, record, i)))
+        threads[-1].daemon = True
+        threads[-1].start()
+
+    for i in range(NUMBER_OF_THREADS):
+        threads[i].join()
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         print("The right usage is ./jar_capture.py <File with paths>")
         sys.exit(0)
     infile = sys.argv[1]
     unzip_dir_path = sys.argv[2]
+    threads = sys.argv[3]
     projects = getProjects(infile)
     sobj = dict()  # shelve.open("jar_hashes.shelve")
     record = dict()  # shelve.open("jar_db_records.shelve")
-    copy_jars(projects, unzip_dir_path, sobj, record)
+    # copy_jars(projects, unzip_dir_path, sobj, record, threads)
+    create_subprocess_of_jar_capturing(projects, unzip_dir_path, sobj, record, threads)
