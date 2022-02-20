@@ -109,11 +109,12 @@ def getProjects(infile):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("The right usage is ./jar_capture.py <File with paths>")
+    if len(sys.argv) != 3:
+        print("The right usage is ./jar_capture.py <File with paths> <temp_unzip_dir>")
         sys.exit(0)
     infile = sys.argv[1]
+    temp_unzip_dir = sys.argv[2]
     projects = getProjects(infile)
     sobj = dict()  # shelve.open("jar_hashes.shelve")
     record = dict()  # shelve.open("jar_db_records.shelve")
-    copy_jars(projects, "temp", sobj, record)
+    copy_jars(projects, temp_unzip_dir, sobj, record)
