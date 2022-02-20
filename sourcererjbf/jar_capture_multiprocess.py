@@ -43,10 +43,12 @@ def final_dest(jar):
         if not os.path.exists(fullfolder):
             os.makedirs(fullfolder)
         existing_file_count = len(os.listdir(fullfolder))
-
-        copy_path = os.path.join(folder, filename + "_" + str(existing_file_count) + "." + extension)
-        fullpath = os.path.join(muse_jars, copy_path)
-        return fullpath, copy_path
+        if existing_file_count == 0:
+            copy_path = os.path.join(folder, filename + "_" + str(existing_file_count) + "." + extension)
+            fullpath = os.path.join(muse_jars, copy_path)
+            return fullpath, copy_path
+        else:
+            return "", ""
     except Exception:
         print(jar)
         return "", ""
