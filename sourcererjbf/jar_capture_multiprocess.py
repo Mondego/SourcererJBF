@@ -132,7 +132,7 @@ if __name__ == "__main__":
         sys.exit(0)
     infile = sys.argv[1]
     unzip_dir_path = sys.argv[2]
-    threads = sys.argv[3]
+    threads = int(sys.argv[3])
     projects = getProjects(infile)
     sobj = dict()  # shelve.open("jar_hashes.shelve")
     record = dict()  # shelve.open("jar_db_records.shelve")
