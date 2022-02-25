@@ -27,31 +27,39 @@ already_processed = set()
 
 # This function grabs a zip, searches for a pom.xml file, if it exists
 # downloads all the dependencies using maven to a ./target/dependencies
+
+
 def get_maven_dependencies_from_zip(zip_path, process_num, logging, jar_folder, extract_folder):
     pom_file = None
+    try:
+        with zipfile.ZipFile(os.path.join(projects_abs_path, zip_path)) as z:
+            for line in z.namelist():
+                line_strip = line.strip()
+                if line_strip.endswith("pom.xml"):
+                    pom_file = line_strip
+                    break
 
-    with zipfile.ZipFile(os.path.join(projects_abs_path, zip_path)) as z:
-        for line in z.namelist():
-            line_strip = line.strip()
-            if line_strip.endswith("pom.xml"):
-                pom_file = line_strip
-                break
+            if pom_file is None:
+                logging.info('No pom.xml file on ' + zip_path)
+                return
 
-        if pom_file is None:
-            logging.info('No pom.xml file on ' + zip_path)
-            return
+            logging.info(pom_file + ' found for ' + zip_path)
 
-        logging.info(pom_file + ' found for ' + zip_path)
+            z.extractall(extract_folder)
+    except Exception as e:
+        logging.info('Zip exception on ' + zip_path)
+        os.system('rm -rf ' + os.path.join(extract_folder + '/*'))
+        return
 
-        z.extractall(extract_folder)
-
-        # with open(os.path.join(working_dir,'pom.xml'),'w') as file:
-        #  file.write(z.read(pom_file))
+    # with open(os.path.join(working_dir,'pom.xml'),'w') as file:
+    #  file.write(z.read(pom_file))
     output = ''
+
     try:
         # output = check_output(["timeout",str(TIMEOUT_MAVEM),"mvn", "dependency:copy-dependencies", "-DoutputDirectory="+jar_folder, "-f", os.path.join(extract_folder,pom_file)])
         output = check_output(["mvn", "dependency:copy-dependencies", "-DoutputDirectory=" + jar_folder, "-f",
                                os.path.join(extract_folder, pom_file)], encoding='utf8')
+
     except Exception as e:
         logging.info('Maven exception on ' + zip_path)
         os.system('rm -rf ' + os.path.join(extract_folder + '/*'))
