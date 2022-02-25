@@ -305,8 +305,12 @@ if __name__ == "__main__":
 
         yes_no()
 
-        ## jar_folder is shared for all the processes, and is where all jars are downloaded to
-        jar_folder = os.path.join(working_dir, JAR_FOLDER)
+        # jar_folder is shared for all the processes, and is where all jars are downloaded to
+        # jar_folder = os.path.join(working_dir, JAR_FOLDER)
+        # tweak this line to place the jars in a network disk path
+        # --------
+        jar_folder = os.path.join(os.path.abspath(options.logsDirs), JAR_FOLDER)
+        # ------------
         print(jar_folder)
         if not os.path.isdir(jar_folder):
             os.makedirs(jar_folder)
