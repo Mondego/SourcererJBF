@@ -54,6 +54,7 @@ def get_maven_dependencies_from_zip(zip_path, process_num, logging, jar_folder, 
                                os.path.join(extract_folder, pom_file)], encoding='utf8')
     except Exception as e:
         logging.info('Maven exception on ' + zip_path)
+        os.system('rm -rf ' + os.path.join(extract_folder + '/*'))
         return
 
     new_jars = 0
