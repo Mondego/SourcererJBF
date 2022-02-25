@@ -11,6 +11,8 @@ from shutil import copyfile
 import hashlib
 
 # If a path needs to be appended to the list of project paths
+from pip._vendor.distlib.compat import raw_input
+
 projects_abs_path = ''  # '/extra/lopes1/mondego-data/projects/di-stackoverflow-clone/github-repo/java-projects'
 
 JAR_FOLDER = 'JARS'
@@ -317,10 +319,10 @@ if __name__ == "__main__":
 
         # Multiprocessing with N_PROCESSES
         # [process, project_count]
-        processes = [None for i in xrange(N_PROCESSES)]
+        processes = [None for i in range(N_PROCESSES)]
         # The queue for processes to communicate back to the parent (this process)
         global_queue = Queue()
-        for i in xrange(N_PROCESSES):
+        for i in range(N_PROCESSES):
             global_queue.put(i)
 
         # Start all other projects
