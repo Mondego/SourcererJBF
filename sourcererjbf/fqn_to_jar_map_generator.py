@@ -8,7 +8,7 @@
 import sys, os, json, re, shelve
 from multiprocessing import Process, Queue
 from subprocess import check_output, run, call, CalledProcessError, STDOUT, PIPE
-from utility import create_logger
+from .utility import create_logger
 from zipfile import ZipFile
 
 NUMBER_OF_THREADS = 20
