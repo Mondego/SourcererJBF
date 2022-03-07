@@ -24,9 +24,10 @@ def get_fqn_jar_map():
     config = configparser.ConfigParser()
     config.read('jbf.config.txt')
     fqn_to_jar_map_file = config.get('DEFAULT', 'fqn_to_jar')
-    thread = config.getint('DEFAULT', 'threads')
-    jar_repo_path = config.get('DEFAULT', 'jars')
-    return load_or_create(jar_repo_path, fqn_to_jar_map_file, thread)
+    return shelve.open(fqn_to_jar_map_file)
+    # thread = config.getint('DEFAULT', 'threads')
+    # jar_repo_path = config.get('DEFAULT', 'jars')
+    # return load_or_create(jar_repo_path, fqn_to_jar_map_file, thread)
 
 
 def load_or_create(folderpath, filename, threads):
@@ -58,9 +59,10 @@ def create_jar_depends(depends, local=list()):
 
 def FixDeps(threadid, packages, project):
     global FQN_TO_JAR_MAP
-    if not bool(FQN_TO_JAR_MAP):
-        FQN_TO_JAR_MAP = get_fqn_jar_map()
-
+    # if not bool(FQN_TO_JAR_MAP):
+    #   FQN_TO_JAR_MAP = get_fqn_jar_map()
+    FQN_TO_JAR_MAP = get_fqn_jar_map()
+    print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
     not_present = [pkg for pkg in set(packages) if pkg not in FQN_TO_JAR_MAP]
     if len(not_present) > 0:
         project["packages_not_in_fqnmap"] = not_present
@@ -78,9 +80,10 @@ def FixDeps(threadid, packages, project):
 
 def FixDepsWithOwnJars(threadid, packages, project):
     global FQN_TO_JAR_MAP
-    if not bool(FQN_TO_JAR_MAP):
-        FQN_TO_JAR_MAP = get_fqn_jar_map()
-
+    # if not bool(FQN_TO_JAR_MAP):
+    #    FQN_TO_JAR_MAP = get_fqn_jar_map()
+    FQN_TO_JAR_MAP = get_fqn_jar_map()
+    print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
     local_fqn_map = find_and_scrape_jars(threadid, project)
     not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
     remaining = set()
@@ -90,6 +93,7 @@ def FixDepsWithOwnJars(threadid, packages, project):
         not_present = [pkg for pkg in set(remaining) if pkg not in FQN_TO_JAR_MAP]
         if len(not_present) > 0:
             project["packages_not_in_fqnmap"] = not_present
+            FQN_TO_JAR_MAP.close()
             return False, project
     succ, depends_local = find_depends(set(packages) - set(remaining), local_fqn_map)
     if len(remaining) > 0:
@@ -97,10 +101,12 @@ def FixDepsWithOwnJars(threadid, packages, project):
     if not succ:
         # print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
         succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, debug=True)
+        FQN_TO_JAR_MAP.close()
         return False, project
 
     project["depends"] = create_jar_depends(depends, local=depends_local)
     project["create_build"] = True
+    FQN_TO_JAR_MAP.close()
     return True, project
 
 
