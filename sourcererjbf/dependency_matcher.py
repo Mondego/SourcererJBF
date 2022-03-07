@@ -24,7 +24,7 @@ def get_fqn_jar_map():
     config = configparser.ConfigParser()
     config.read('jbf.config.txt')
     fqn_to_jar_map_file = config.get('DEFAULT', 'fqn_to_jar')
-    return shelve.open(fqn_to_jar_map_file)
+    return shelve.open(fqn_to_jar_map_file, 'r')
     # thread = config.getint('DEFAULT', 'threads')
     # jar_repo_path = config.get('DEFAULT', 'jars')
     # return load_or_create(jar_repo_path, fqn_to_jar_map_file, thread)
@@ -62,7 +62,7 @@ def FixDeps(threadid, packages, project):
     # if not bool(FQN_TO_JAR_MAP):
     #   FQN_TO_JAR_MAP = get_fqn_jar_map()
     FQN_TO_JAR_MAP = get_fqn_jar_map()
-    print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
+    # print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
     not_present = [pkg for pkg in set(packages) if pkg not in FQN_TO_JAR_MAP]
     if len(not_present) > 0:
         project["packages_not_in_fqnmap"] = not_present
@@ -83,7 +83,7 @@ def FixDepsWithOwnJars(threadid, packages, project):
     # if not bool(FQN_TO_JAR_MAP):
     #    FQN_TO_JAR_MAP = get_fqn_jar_map()
     FQN_TO_JAR_MAP = get_fqn_jar_map()
-    print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
+    # print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
     local_fqn_map = find_and_scrape_jars(threadid, project)
     not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
     remaining = set()
