@@ -3,20 +3,15 @@ import json, sys, os
 
 pbs = dict((os.path.join(f1, f2), json.load(open(os.path.join(sys.argv[1], f1, f2, "build-result.json")))) for f1 in
            os.listdir(sys.argv[1]) for f2 in os.listdir(os.path.join(sys.argv[1], f1)))
-print
-"Total projects", len(pbs)
+print("Total projects", len(pbs))
 success_count = len([id for id in pbs if pbs[id]["success"]])
-print
-"Total Success", success_count, float(success_count) * 100 / float(len(pbs)), "%"
-print
-"Projects that build successfully on first try: ", len(
-    [id for id in pbs if pbs[id]["success"] and "depends" not in pbs[id]])
-print
-"Projects that build successfully with encoding fixed", len(
-    [id for id in pbs if pbs[id]["success"] and "encoding" in pbs[id]])
-print
-"Projects that build successfully with dependencies met", len(
-    [id for id in pbs if pbs[id]["success"] and "depends" in pbs[id]])
+print("Total Success", success_count, float(success_count) * 100 / float(len(pbs)), "%")
+print("Projects that build successfully on first try: ", len(
+    [id for id in pbs if pbs[id]["success"] and "depends" not in pbs[id]]))
+print("Projects that build successfully with encoding fixed", len(
+    [id for id in pbs if pbs[id]["success"] and "encoding" in pbs[id]]))
+print("Projects that build successfully with dependencies met", len(
+    [id for id in pbs if pbs[id]["success"] and "depends" in pbs[id]]))
 
 
 def get_details(pid, details):

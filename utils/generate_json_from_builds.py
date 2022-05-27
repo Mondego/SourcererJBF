@@ -5,8 +5,7 @@ import os, sys
 import json
 
 if len(sys.argv) != 3:
-    print
-    'ERROR, two arguments needed, input folder and output file name.'
+    print('ERROR, two arguments needed, input folder and output file name.')
     sys.exit(1)
 
 folder = sys.argv[1]

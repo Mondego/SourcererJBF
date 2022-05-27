@@ -6,8 +6,7 @@ import sys, os
 import json
 from shutil import copy2
 
-print
-'** WARNING ** This script uses a fair amount of custom paths so look inside before using it'
+print('** WARNING ** This script uses a fair amount of custom paths so look inside before using it')
 sys.exit(1)
 
 pd = json.load(open(sys.argv[1], 'r'))
@@ -21,10 +20,8 @@ for jar in s:
     if not os.path.exists(corpus_directory):
         os.makedirs(corpus_directory)
 
-    print
-    jar.replace('../..', '/extra/lopes1/mondego-data')
-    print
-    corpus_directory
+    print(jar.replace('../..', '/extra/lopes1/mondego-data'))
+    print(corpus_directory)
     copy2(jar.replace('../..', '/extra/lopes1/mondego-data'), corpus_directory)
 
 # print s

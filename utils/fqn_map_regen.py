@@ -17,7 +17,7 @@ def get_all_variations(fqn_parts):
 
 def get_all_fqns_from_path(path):
     all_paths = set()
-    for line in check_output(["jar", "tf", path], stderr=STDOUT).split("\n"):
+    for line in check_output(["jar", "tf", path], encoding='utf8', stderr=STDOUT).split("\n"):
         if line.endswith(".class"):
             new_line = "/".join(l for l in line[:-6].split("$") if not re.match(r"\d+", l))
             if new_line == line[:-6].split("$")[0]:
@@ -27,13 +27,11 @@ def get_all_fqns_from_path(path):
 
 
 fqnfile, root, THREADCOUNT = sys.argv[1], sys.argv[2], int(sys.argv[3])
-print
-"Loading jars"
+print("Loading jars")
 start = time.time()
 fqn_to_jars = json.load(open(fqnfile))
 end = time.time() - start
-print
-"Loading complete", end
+print("Loading complete", end)
 
 all_jars = set()
 for fqn in fqn_to_jars:
@@ -50,8 +48,7 @@ def mapper(threadid, jars, outq):
     for jar_file in jars:
         count += 1
         if count % 100 == 0:
-            print
-            "THREAD %d, finished %d" % (threadid, count)
+            print("THREAD %d, finished %d" % (threadid, count))
         try:
             jpath = os.path.join(root, jar_file)
             logger.info("Processing %s" % jpath)
@@ -62,8 +59,7 @@ def mapper(threadid, jars, outq):
                 save.write("%s\t%s\n" % (mfqn, jar_file))
         except Exception:
             # raise
-            print
-            "Found Exception"
+            print("Found Exception")
             continue
 
 
@@ -93,17 +89,14 @@ processes = list()
 
 # for i in range(THREADCOUNT):
 #    p.put("DONE")
-print
-"Starting the threads."
+print("Starting the threads.")
 for i in range(THREADCOUNT):
     processes.append(Process(target=mapper, args=(i, all_jars[i::THREADCOUNT], outq)))
     processes[-1].daemon = True
     processes[-1].start()
 for p in processes:
     p.join()
-print
-"Starting reducer"
+print("Starting reducer")
 reducer(outq)
-print
-"Done with all threads."
+print("Done with all threads.")
 json.dump(fqn_to_jars, open(fqnfile + ".new", "w"), indent=4, sort_keys=True, escape_forward_slashes=False)

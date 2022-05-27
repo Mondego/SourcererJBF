@@ -54,8 +54,7 @@ def copy_jars(list_projects):
             continue
             # print 'No JAR files found for',project
 
-    print
-    '%s JAR files being copied...' % (len(list_jars))
+    print('%s JAR files being copied...' % (len(list_jars)))
 
     for origin in list_jars:
         dest_jar = os.path.join(PATH_result_jars, origin[len(JARS_LOCATION):])
@@ -67,12 +66,11 @@ def copy_jars(list_projects):
 
 
 def yes_no():
-    print
-    """****** This scripts assumes that jar files are located at:
+    print("""****** This scripts assumes that jar files are located at:
    ******     %s.
    ****** This script also assumes the extension of the archives of the projects has
    ******     3 characters (zip,tar).
-   ****** Press enter to continue. """ % JARS_LOCATION
+   ****** Press enter to continue. """ % JARS_LOCATION)
 
     while True:
         choice = raw_input().lower()
@@ -100,18 +98,16 @@ if __name__ == "__main__":
     yes_no()
 
     if os.path.isdir(PATH_result_projects) or os.path.isdir(PATH_result_jars) or os.path.isdir(PATH_result_builds):
-        print
-        "Folders '%s', '%s' or '%s' already exist!" % (PATH_result_projects, PATH_result_jars, PATH_result_builds)
+        print(
+            "Folders '%s', '%s' or '%s' already exist!" % (PATH_result_projects, PATH_result_jars, PATH_result_builds))
         sys.exit(0)
 
     if not len(sys.argv) > 1:
-        print
-        "No arguments were passed. Try running with '--help'."
+        print("No arguments were passed. Try running with '--help'.")
         sys.exit(0)
 
     if not options.listProjects:
-        print
-        "Arguments '-l' missing. Try running with '--help'."
+        print("Arguments '-l' missing. Try running with '--help'.")
         sys.exit(0)
     else:
         with open(options.listProjects, 'r') as file:
@@ -119,28 +115,22 @@ if __name__ == "__main__":
                 list_projects.add(proj.strip())
 
     if not options.projectsDirectory:
-        print
-        "Arguments '-d' missing. Try running with '--help'."
+        print("Arguments '-d' missing. Try running with '--help'.")
         sys.exit(0)
     else:
         projects_dir = options.projectsDirectory
 
     if not options.builds:
-        print
-        "Arguments '-b' missing. Try running with '--help'."
+        print("Arguments '-b' missing. Try running with '--help'.")
         sys.exit(0)
     else:
         builds_dir = options.builds
         PATH_original_builds = options.builds
 
-    print
-    'Copying projects ...'
+    print('Copying projects ...')
     copy_projects(list_projects, projects_dir)
-    print
-    'Copying builds/ ...'
+    print('Copying builds/ ...')
     copy_builds(list_projects, builds_dir)
-    print
-    'Copying JAR files ...'
+    print('Copying JAR files ...')
     copy_jars(list_projects)
-    print
-    "Finished. Results in 'sample/'."
+    print("Finished. Results in 'sample/'.")

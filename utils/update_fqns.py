@@ -22,8 +22,7 @@ def get_all_fqns_from_line(line):
 
 
 jar_details = json.load(open("jar_details.json"))
-print
-"Loaded jar details"
+print("Loaded jar details")
 class_to_jarmap_full = dict()
 
 
@@ -44,14 +43,11 @@ def jarpathmapper(i, jarpaths):
         for line in jar_details[jarpath]:
             if line.endswith(".class"):
                 class_to_jarmap.setdefault(line, set()).add(jar)
-    print
-    "Converting set to list", i
+    print("Converting set to list", i)
     convert_set_to_list(class_to_jarmap)
-    print
-    "Converted set to list", i
+    print("Converted set to list", i)
     json.dump(class_to_jarmap, open("saves/jarpathmapper_%d" % i, "w"))
-    print
-    "Done", i
+    print("Done", i)
 
 
 def jarpathreducer():
@@ -59,8 +55,7 @@ def jarpathreducer():
         partmap = json.load(open("saves/jarpathmapper_%d" % i))
         for cls in partmap:
             class_to_jarmap_full.setdefault(cls, set()).update(set(partmap[cls]))
-        print
-        "Completed saves/jarpathmapper_%d" % i
+        print("Completed saves/jarpathmapper_%d" % i)
 
 
 jmappers = list()
@@ -75,16 +70,13 @@ jarslist = list(jar_details)
 # for i in range(THREADCOUNT):
 #  jmappers[i].join()
 
-print
-"JMAPPERS FINISHED"
+print("JMAPPERS FINISHED")
 
 # jarpathreducer()
 
-print
-"JREDUCE DONE"
+print("JREDUCE DONE")
 fqn_to_jarmap_full = dict()
-print
-"Inverted jar details", len(class_to_jarmap_full)
+print("Inverted jar details", len(class_to_jarmap_full))
 
 
 def expand_mapper(i, lines):
@@ -100,14 +92,11 @@ def expand_mapper(i, lines):
             for fqn in all_fqns:
                 if fqn and fqn != "org" and fqn != "com":
                     fqn_to_jarmap.setdefault(fqn, set()).update(class_to_jarmap_full[cls])
-    print
-    "Converting set to list", i
+    print("Converting set to list", i)
     convert_set_to_list(fqn_to_jarmap)
-    print
-    "Finished converting set to list", i
+    print("Finished converting set to list", i)
     json.dump(fqn_to_jarmap, open("saves/expandmapper_%d" % i, "w"))
-    print
-    "Done", i
+    print("Done", i)
 
 
 def expand_reducer():
@@ -115,8 +104,7 @@ def expand_reducer():
         part_map = json.load(open("saves/expandmapper_%d" % i))
         for key in part_map:
             fqn_to_jarmap_full.setdefault(key, set()).update(set(part_map[key]))
-    print
-    "Completed saves/expandmapper_%d" % i
+    print("Completed saves/expandmapper_%d" % i)
 
 
 # cPickle.dump(class_to_jarmap_full, open("class_to_jarmap_full.json", "w"))
@@ -135,18 +123,13 @@ for i in range(THREADCOUNT):
     emappers[-1].daemon = True
     emappers[-1].start()
 
-print
-"STarted all expand mappers"
+print("STarted all expand mappers")
 for i in range(THREADCOUNT):
     emappers[i].join()
-print
-"Completed all expand mappers"
+print("Completed all expand mappers")
 expand_reducer()
-print
-"Completed expand reducer"
+print("Completed expand reducer")
 convert_set_to_list(fqn_to_jarmap_full)
-print
-"Converted set to list"
+print("Converted set to list")
 json.dump(fqn_to_jarmap_full, open("fqn_to_jars.json.new", "w"), indent=4, separators=(',', ': '), sort_keys=True)
-print
-"Done"
+print("Done")

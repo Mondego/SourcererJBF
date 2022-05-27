@@ -5,7 +5,10 @@
 #
 # Usage: ./compile_checker.py -r <Root Directory>
 
-import os, zipfile, shelve, shutil, json, sys, re, argparse, time, datetime
+import os, zipfile, shelve, shutil, sys, re, argparse, time, datetime
+from pathlib import Path
+
+import simplejson as json
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
 from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
@@ -30,7 +33,7 @@ def TryNewBuild(project, threadid, output):
     project["create_build"] = True
     try:
         srcdir = TEMPDIR.format(threadid)
-        project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"]) != ""
+        project["has_own_build"] = check_output(["find", srcdir, "-name", "build.xml"], encoding='utf8') != ""
     except CalledProcessError:
         project["has_own_build"] = False
     return True, output, project
@@ -40,7 +43,7 @@ def OwnBuild(project, threadid, output):
     # project["create_build"] = False
     try:
         srcdir = TEMPDIR.format(threadid)
-        ant_find = check_output(["find", srcdir, "-name", "build.xml"])
+        ant_find = check_output(["find", srcdir, "-name", "build.xml"], encoding='utf8')
         if ant_find != "":
             project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
             project["has_own_build"] = True
@@ -48,7 +51,7 @@ def OwnBuild(project, threadid, output):
             # print "ANT: ", project["path"]
             return True, output, project
 
-        mvn_find = check_output(["find", srcdir, "-name", "pom.xml"])
+        mvn_find = check_output(["find", srcdir, "-name", "pom.xml"], encoding='utf8')
         if mvn_find != "":
             project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
             project["has_own_build"] = True
@@ -56,7 +59,7 @@ def OwnBuild(project, threadid, output):
             # print "MVN: ", project["path"]
             return True, output, project
 
-        gradle_find = check_output(["find", srcdir, "-name", "build.gradle"])
+        gradle_find = check_output(["find", srcdir, "-name", "build.gradle"], encoding='utf8')
         if gradle_find != "":
             project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
             project["has_own_build"] = True
@@ -116,7 +119,7 @@ def Compile(threadid, generated_build, project):
             try:
                 command = " ".join(project["use_command"])
                 project["timing"].append(("start_build", time.time()))
-                output = check_output(project["use_command"], stderr=STDOUT, timeout=TIMEOUT_SECONDS)
+                output = check_output(project["use_command"], encoding='utf8', stderr=STDOUT, timeout=TIMEOUT_SECONDS)
                 project["timing"].append(("end_build", time.time()))
                 return True, output, command, ""
             except CalledProcessError as e:
@@ -125,7 +128,8 @@ def Compile(threadid, generated_build, project):
             try:
                 command = "ant -f build.xml compile"
                 project["timing"].append(("start_build", time.time()))
-                output = check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], stderr=STDOUT,
+                output = check_output(["ant", "-f", os.path.join(srcdir, "build.xml"), "compile"], encoding='utf8',
+                                      stderr=STDOUT,
                                       timeout=TIMEOUT_SECONDS)
                 project["timing"].append(("end_build", time.time()))
                 return True, output, command, ""
@@ -160,7 +164,7 @@ def unzip(zipFilePath, destDir):
         zip_ref = zipfile.ZipFile(zipFilePath, 'r')
         zip_ref.extractall(destDir)
         zip_ref.close()
-        # print "Success ", zipFilePath, destDir
+        # print( "Success ", zipFilePath, destDir)
     except Exception as e:
         pass
 
@@ -194,9 +198,13 @@ def MakeBuild(project, threadid):
         mavendepends = set([d for d in depends if d[3]])
         mavenline = "\n  ".join([d[4] for d in mavendepends])
         jardepends = depends - mavendepends
-        jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(
-            os.path.join("../..", JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode(
-                "utf-8", "xmlcharrefreplace")) for d in jardepends])
+
+        # ecoding won't work as d coming as a string not byte
+        # jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../.." ,JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
+        jarline = "\n        ".join(
+            ["<pathelement path=\"{0}\" />".format(os.path.join("/", JAR_REPO, d[4]) if not d[5] else d[4]) for d in
+             jardepends])
+
         if jarline or mavenline:
             if mavenline:
                 classpath += "\n      <classpath refid=\"default.classpath\" />"
@@ -256,29 +264,95 @@ def TryCompile(trynumber, project, methods, threadid, output):
 
 def CopyTarget(projectpath, threadid):
     copyrecursively(projectpath, TEMPDIR.format(threadid))
-    check_output(["chmod", "-R", "+w", TEMPDIR.format(threadid)])
+    check_output(["chmod", "-R", "+w", TEMPDIR.format(threadid)], encoding='utf8')
+
+
+# def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
+#     if succ:
+#         dstpath = os.path.join(outdir, project["file"], "build")
+#     dstpath2 = os.path.join(outdir, project["file"], "custom_build_script")
+#
+#     if succ:
+#         check_output(["mkdir", "-p", dstpath], encoding='utf8')
+#     check_output(["mkdir", "-p", dstpath2], encoding='utf8')
+#
+#     if succ:
+#         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), dstpath)
+#     for (filename, content) in buildfiles:
+#         open(os.path.join(dstpath2, filename), "w").write(content)
+
+
+def CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ):
+    dependents_jars_path = os.path.join(outdir, project["file"], "depends")
+    check_output(["mkdir", "-p", dependents_jars_path], encoding='utf8')
+    if "depends" in project:
+        list_of_jars = project["depends"]
+        for jar in list_of_jars:
+            jar_path = jar[4]
+            if os.path.exists(os.path.join("/", jar_path)):
+                check_output(["cp", os.path.join("/", jar_path), dependents_jars_path], encoding='utf8')
+            else:
+                project_unzip_path = os.path.join(TEMPDIR.format(threadid))
+                merged_path = os.path.join(project_unzip_path, jar_path)
+                if os.path.exists(merged_path):
+                    check_output(["cp", merged_path, dependents_jars_path], encoding='utf8')
+
+
+def UpdateBuildFiles(project, output_project_path):
+    classpath = ""
+    mavenline = ""
+    if "depends" in project:
+        depends = set([(a, b, c, d, e, f) for a, b, c, d, e, f in project["depends"]])
+        mavendepends = set([d for d in depends if d[3]])
+        mavenline = "\n  ".join([d[4] for d in mavendepends])
+        jardepends = depends - mavendepends
+
+        # ecoding won't work as d coming as a string not byte
+        # jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../.." ,JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
+        jarline = "\n        ".join(
+            ["<pathelement path=\"{0}\" />".format(
+                os.path.join("/", JAR_REPO, d[4]) if not d[5] else "depends/" + Path(d[4]).name) for d in
+                jardepends])
+
+        if jarline or mavenline:
+            if mavenline:
+                classpath += "\n      <classpath refid=\"default.classpath\" />"
+            if jarline:
+                classpath = "\n      <classpath>\n        " + jarline + "\n      </classpath>"
+
+    desc = project["description"] if "description" in project else ""
+    ivyfile = open("xml-templates/ivy-template.xml", "r").read().format(
+        project["name"] if "name" in project else "compile_checker_build", mavenline)
+    buildfile = open("xml-templates/build-template.xml", "r").read().format(
+        project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}",
+        project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"),
+        "yes" if VERBOSE else "no")
+    # srcdir = TEMPDIR.format(threadid)
+    open(os.path.join(output_project_path, "ivy.xml"), "w").write(ivyfile)
+    open(os.path.join(output_project_path, "build.xml"), "w").write(buildfile)
+    return ivyfile, buildfile
 
 
 def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
+    project_zip_path = project['path']
+    output_project_path = os.path.join(outdir, project["file"])
     if succ:
-        dstpath = os.path.join(outdir, project["file"], "build")
-    dstpath2 = os.path.join(outdir, project["file"], "custom_build_script")
+        build_files_path = os.path.join(outdir, project["file"], "build")
+        check_output(["mkdir", "-p", build_files_path], encoding='utf8')
+        copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
+        unzip(project_zip_path, output_project_path)
+        CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
+        UpdateBuildFiles(project, output_project_path)
 
-    if succ:
-        check_output(["mkdir", "-p", dstpath])
-    check_output(["mkdir", "-p", dstpath2])
-
-    if succ:
-        copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), dstpath)
-    for (filename, content) in buildfiles:
-        open(os.path.join(dstpath2, filename), "w").write(content)
+    # for (filename, content) in buildfiles:
+    #     open(os.path.join(output_project_path, filename), "w").write(content)
 
 
 def SaveOutput(save, project, succ, output, outdir, command):
     project.update({"success": succ, "output": output})
     project_path = os.path.join(outdir, project["file"])
     if not os.path.exists(project_path):
-        check_output(["mkdir", "-p", project_path])
+        check_output(["mkdir", "-p", project_path], encoding='utf8')
     json.dump(project, open(os.path.join(project_path, "build-result.json"), "w"), sort_keys=True, indent=4,
               separators=(",", ": "))
     open(os.path.join(project_path, "build.command"), "w").write(command)
@@ -302,7 +376,7 @@ def CleanFolder(threadid):
 
 def isAndroid(threadid):
     srcdir = TEMPDIR.format(threadid)
-    var = check_output(["find", srcdir, "-name", "AndroidManifest.xml"])
+    var = check_output(["find", srcdir, "-name", "AndroidManifest.xml"], encoding='utf8')
     if not var:
         return False
     else:
@@ -322,10 +396,10 @@ def Uncompress(comp_path, threadid):
     if not os.path.exists(path):
         make_dir("Uncompress/uncompressed_{0}".format(threadid))
     else:
-        check_output(["rm", "-rf", path])
+        check_output(["rm", "-rf", path], encoding='utf8')
         make_dir("Uncompress/uncompressed_{0}".format(threadid))
     unzip(comp_path, path)
-    check_output(["chmod", "777", "-R", path])
+    check_output(["chmod", "777", path], encoding='utf8')
     return path
 
 
@@ -367,7 +441,7 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
             # print "Found Exception", e
             continue
         srcdir = TEMPDIR.format(threadid)
-        findjava = check_output(["find", srcdir, "-name", "*.java"], timeout=TIMEOUT_SECONDS)
+        findjava = check_output(["find", srcdir, "-name", "*.java"], timeout=TIMEOUT_SECONDS, encoding='utf8')
         succ, output, buildfs, command = (TryCompile(0, project, methods, threadid, []) if not failtocopy else (
             False, [{"error_type": "Copy failure"}], [], "") if findjava != "" else (
             False, [{"error_type": "No Java Files"}], "", ""))
@@ -414,8 +488,7 @@ def ConsolidateOutput():
                         continue
 
         final[key] = data
-    print
-    "Writing json"
+    print("Writing Output JSON")
     return final
 
 
@@ -434,13 +507,12 @@ def progress(count, succ, fail, total, suffix=''):
 
 
 def progressbar(recordq, total):
-    print
-    "TOTAL NUMBER OF PROJECTS TO COMPILE:", total
+    print("TOTAL NUMBER OF PROJECTS TO COMPILE:", total)
     count = 0
     succ = 0
     fail = 0
     start_t = time.time()
-    progress(0, 0, 0, total, suffix="Initalizing Threads")
+    progress(0, 0, 0, total, suffix="Initializing Threads")
     item = recordq.get()
     while item != "DONE":
         count += 1
@@ -455,8 +527,7 @@ def progressbar(recordq, total):
         progress(count, succ, fail, total, suffix="%d(%.1fper)PASS, %d Total, ETA: %s" % (
             succ, float(succ) * 100 / float(succ + fail), succ + fail, strtime))
         item = recordq.get()
-    print
-    "\n"
+    print("\n")
 
 
 def main(root, projects, outdir, methods, ):
@@ -480,8 +551,7 @@ def main(root, projects, outdir, methods, ):
         processes[i].join()
     recordq.put("DONE")
     time.sleep(1)
-    print
-    "Done with all threads."
+    print("Done With All Threads")
     return ConsolidateOutput()
 
 
@@ -515,7 +585,7 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--threads', default=10, type=int, help='The number of base threads to be run.')
     args = parser.parse_args()
     root, infile, outdir, outfile, THREADCOUNT = args.root, args.file, args.outfolder, args.output, args.threads
-    dependency_matcher.load_fqns(args.jars, args.fqn_to_jar)
+    dependency_matcher.load_fqns(args.jars, args.fqn_to_jar, args.threads)
     JAR_REPO = args.jars
     if not os.path.exists("TBUILD"):
         os.makedirs("TBUILD")
