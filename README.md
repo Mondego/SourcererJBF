@@ -4,7 +4,7 @@ JBF first takes a vast collection of Java projects as input and scrapes all the 
 or the web. Then it indexes these dependencies and compiles the projects in multiple stages. During the compilation, JBF fixes errors
 and resolves external dependencies.
 
-<img src="doc/jbf-500.png"/>
+<img src="doc/jbf-overview.png"/>
 
 ### Installation
 
