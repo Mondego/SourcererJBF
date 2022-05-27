@@ -84,15 +84,14 @@ def make_fqn_part(locations, threadid):
             logger.error(path + "error" + str(e))
         count += 1
         if count % 100 == 0:
-            print
-            "Thread " + str(threadid) + ": " + str(count) + "/" + str(total)
+            print("Thread " + str(threadid) + ": " + str(count) + "/" + str(total))
 
 
 def reducequeue():
     jar_to_fqn = {}
     bad_jars = set()
     for i in range(NUMBER_OF_THREADS):
-        print(i)
+        # print(i)
         part = dict(shelve.open("save_" + str(i)))
         for item in part:
             jar_to_fqn.setdefault(item, set()).update(part[item])
@@ -124,7 +123,7 @@ def save_to_shelve(savefile, fqn_map):
     for fqn in fqn_map:
         try:
             sh[str(fqn)] = fqn_map[fqn]
-            print(sh[str(fqn)])
+            # print(sh[str(fqn)])
             sh.sync()
         except Exception as e:
             print("Exception (probably decoding) when writing out fqn: ", fqn, e)
@@ -149,7 +148,6 @@ def get_locations_from_folder(location):
         return jar_path
     except CalledProcessError:
         print("Error when trying to find jars in folder", location)
-
 
 
 if __name__ == "__main__":

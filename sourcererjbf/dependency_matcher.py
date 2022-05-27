@@ -22,7 +22,7 @@ def load_fqns(folderpath, filename, threads):
 
 def get_fqn_jar_map():
     config = configparser.ConfigParser()
-    config.read('jbf.config.txt')
+    config.read('jbf.config')
     fqn_to_jar_map_file = config.get('DEFAULT', 'fqn_to_jar')
     return shelve.open(fqn_to_jar_map_file, 'r')
     # thread = config.getint('DEFAULT', 'threads')
@@ -32,7 +32,11 @@ def get_fqn_jar_map():
 
 def load_or_create(folderpath, filename, threads):
     if not os.path.exists(filename):
+        print("Started FQN Index Building")
         search_and_save(get_locations_from_folder(folderpath), filename, threads)
+        print("FQN Index Building Done")
+    else:
+        print("Existing FQN Index Found in: " + filename)
     return shelve.open(filename)
 
 

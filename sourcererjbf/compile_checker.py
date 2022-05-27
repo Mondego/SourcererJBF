@@ -162,7 +162,7 @@ def unzip(zipFilePath, destDir):
         zip_ref = zipfile.ZipFile(zipFilePath, 'r')
         zip_ref.extractall(destDir)
         zip_ref.close()
-        # print "Success ", zipFilePath, destDir
+        # print( "Success ", zipFilePath, destDir)
     except Exception as e:
         pass
 
@@ -420,7 +420,7 @@ def ConsolidateOutput():
                         continue
 
         final[key] = data
-    print("Writing json")
+    print("Writing Output JSON")
     return final
 
 
@@ -444,7 +444,7 @@ def progressbar(recordq, total):
     succ = 0
     fail = 0
     start_t = time.time()
-    progress(0, 0, 0, total, suffix="Initalizing Threads")
+    progress(0, 0, 0, total, suffix="Initializing Threads")
     item = recordq.get()
     while item != "DONE":
         count += 1
@@ -483,7 +483,7 @@ def main(root, projects, outdir, methods, ):
         processes[i].join()
     recordq.put("DONE")
     time.sleep(1)
-    print("Done with all threads.")
+    print("Done With All Threads")
     return ConsolidateOutput()
 
 

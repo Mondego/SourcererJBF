@@ -1,7 +1,9 @@
 # This script is a diff between two build folders
 
-from subprocess import check_output
-import json, os, sys, glob
+import glob
+import json
+import os
+import sys
 
 build_folder_1 = sys.argv[1]
 build_folder_2 = sys.argv[2]

@@ -10,8 +10,7 @@ for i in all_projs:
             err_map.setdefault(err["error_type"], set()).add(i)
     c += 1
     if c % 10000 == 0:
-        print
-        c, len(all_projs)
+        print(c, len(all_projs))
 
 err_count = dict([(e, len(items)) for e, items in err_map.items()])
 output = open("project_stats.txt", "w")

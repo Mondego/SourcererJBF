@@ -21,7 +21,7 @@ def errortype(error_info):
                 "package": getpackage[0].rstrip("*").rstrip(".")
             }
         except Exception:
-            # print "NEXT LINE", error_info["next_line"], item
+            # print( "NEXT LINE", error_info["next_line"], item)
             return {
                 "error_type": "package not found",
                 "package": rpackage.match(item).groups()[0]

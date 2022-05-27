@@ -61,7 +61,7 @@ def get_zip_locations_from_file(file_path):
 
 
 def clean_unzip_dir(folder):
-    call(["rm", "-r", "-f", folder], encoding='utf8')
+    call(["rm", "-r", "-f", folder])
     os.makedirs(folder)
     print("Cleaning up..." + folder)
 

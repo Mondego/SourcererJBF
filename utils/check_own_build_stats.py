@@ -1,7 +1,8 @@
-import os, sys
+import os
+import sys
 
-import simplejson as json
 import pid as pid
+import simplejson as json
 
 projects = [os.path.join(f1, f2) for f1 in os.listdir(sys.argv[2]) for f2 in os.listdir(os.path.join(sys.argv[2], f1))]
 try:
