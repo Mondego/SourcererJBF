@@ -6,6 +6,8 @@
 # Usage: ./compile_checker.py -r <Root Directory>
 
 import os, zipfile, shelve, shutil, sys, re, argparse, time, datetime
+from pathlib import Path
+
 import simplejson as json
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
@@ -265,19 +267,85 @@ def CopyTarget(projectpath, threadid):
     check_output(["chmod", "-R", "+w", TEMPDIR.format(threadid)], encoding='utf8')
 
 
+# def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
+#     if succ:
+#         dstpath = os.path.join(outdir, project["file"], "build")
+#     dstpath2 = os.path.join(outdir, project["file"], "custom_build_script")
+#
+#     if succ:
+#         check_output(["mkdir", "-p", dstpath], encoding='utf8')
+#     check_output(["mkdir", "-p", dstpath2], encoding='utf8')
+#
+#     if succ:
+#         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), dstpath)
+#     for (filename, content) in buildfiles:
+#         open(os.path.join(dstpath2, filename), "w").write(content)
+
+
+def CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ):
+    dependents_jars_path = os.path.join(outdir, project["file"], "depends")
+    check_output(["mkdir", "-p", dependents_jars_path], encoding='utf8')
+    if "depends" in project:
+        list_of_jars = project["depends"]
+        for jar in list_of_jars:
+            jar_path = jar[4]
+            if os.path.exists(os.path.join("/", jar_path)):
+                check_output(["cp", os.path.join("/", jar_path), dependents_jars_path], encoding='utf8')
+            else:
+                project_unzip_path = os.path.join(TEMPDIR.format(threadid))
+                merged_path = os.path.join(project_unzip_path, jar_path)
+                if os.path.exists(merged_path):
+                    check_output(["cp", merged_path, dependents_jars_path], encoding='utf8')
+
+
+def UpdateBuildFiles(project, output_project_path):
+    classpath = ""
+    mavenline = ""
+    if "depends" in project:
+        depends = set([(a, b, c, d, e, f) for a, b, c, d, e, f in project["depends"]])
+        mavendepends = set([d for d in depends if d[3]])
+        mavenline = "\n  ".join([d[4] for d in mavendepends])
+        jardepends = depends - mavendepends
+
+        # ecoding won't work as d coming as a string not byte
+        # jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../.." ,JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
+        jarline = "\n        ".join(
+            ["<pathelement path=\"{0}\" />".format(
+                os.path.join("/", JAR_REPO, d[4]) if not d[5] else "depends/" + Path(d[4]).name) for d in
+                jardepends])
+
+        if jarline or mavenline:
+            if mavenline:
+                classpath += "\n      <classpath refid=\"default.classpath\" />"
+            if jarline:
+                classpath = "\n      <classpath>\n        " + jarline + "\n      </classpath>"
+
+    desc = project["description"] if "description" in project else ""
+    ivyfile = open("xml-templates/ivy-template.xml", "r").read().format(
+        project["name"] if "name" in project else "compile_checker_build", mavenline)
+    buildfile = open("xml-templates/build-template.xml", "r").read().format(
+        project["name"] if "name" in project else "compile_checker_build", desc, classpath, "${build}", "${src}",
+        project["encoding"] if "encoding" in project else "utf8", os.path.join("../..", JAR_REPO, "ext"),
+        "yes" if VERBOSE else "no")
+    # srcdir = TEMPDIR.format(threadid)
+    open(os.path.join(output_project_path, "ivy.xml"), "w").write(ivyfile)
+    open(os.path.join(output_project_path, "build.xml"), "w").write(buildfile)
+    return ivyfile, buildfile
+
+
 def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
+    project_zip_path = project['path']
+    output_project_path = os.path.join(outdir, project["file"])
     if succ:
-        dstpath = os.path.join(outdir, project["file"], "build")
-    dstpath2 = os.path.join(outdir, project["file"], "custom_build_script")
+        build_files_path = os.path.join(outdir, project["file"], "build")
+        check_output(["mkdir", "-p", build_files_path], encoding='utf8')
+        copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
+        unzip(project_zip_path, output_project_path)
+        CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
+        UpdateBuildFiles(project, output_project_path)
 
-    if succ:
-        check_output(["mkdir", "-p", dstpath], encoding='utf8')
-    check_output(["mkdir", "-p", dstpath2], encoding='utf8')
-
-    if succ:
-        copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), dstpath)
-    for (filename, content) in buildfiles:
-        open(os.path.join(dstpath2, filename), "w").write(content)
+    # for (filename, content) in buildfiles:
+    #     open(os.path.join(output_project_path, filename), "w").write(content)
 
 
 def SaveOutput(save, project, succ, output, outdir, command):
