@@ -142,7 +142,7 @@ To learn more about it, please check out this repository [BaaS](https://github.c
 
 
 ### Contact
-If you have any questions or find any issues, please contact at [mdrh@uci.edu](mdrh@uci.edu)
+If you have any questions or find any issues, please contact at [mdrh@uci.edu](mailto:mdrh@uci.edu)
 
 ## License
 This repository is licensed under [GNU General Public License v3.0](LICENSE)
