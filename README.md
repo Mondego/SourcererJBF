@@ -8,6 +8,7 @@ fixes errors and resolves external dependencies.
 
 <img src="doc/jbf-overview.png" alt="JBF High Level Architecture"/>
 
+
 ### Environment Setup & Requirements
 
 - Java Version: JDK-8+ [Preferable Latest Java [OpenJDK17](https://openjdk.java.net/projects/jdk/17/)]
@@ -128,6 +129,12 @@ Please delete all these generated files & folders before each new execution of J
 ```bash
 ./clean-up.sh
 ```
+
+
+### JBF Works in Action
+
+https://user-images.githubusercontent.com/6449333/170950780-6e1f03a2-832f-416e-a531-92da32c6a33b.mp4
+
 
 
 ### Build as a Service (BaaS)
