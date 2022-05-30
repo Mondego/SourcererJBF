@@ -138,6 +138,6 @@ https://user-images.githubusercontent.com/6449333/170950780-6e1f03a2-832f-416e-a
 
 
 ### Build as a Service (BaaS)
-Following the JBF methodology, we also designed a Build as a Service (BaaS), that can instantly build a Java project hosted on GitHub.
+We also designed a Build as a Service (BaaS) platfrom based on the JBF. BaaS can instantly build a Java project hosted on GitHub.
 To learn more about it, please check out this repository [BaaS](https://github.com/Mondego/baas).
 
