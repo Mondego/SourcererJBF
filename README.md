@@ -49,7 +49,7 @@ The file is self-explanatory, and it just requires to update according to host m
 ``` yml
 [DEFAULT]
 # The directory under which all the java projects to be compiled exist.
-root = ./env-test/projects
+root =./env-test/projects
 # Rebuild the projects from scratch. Dependency rematching implies that all projects might not recompile successfully.
 rebuild_from_scratch = True
 # The file with project paths to be build. Paths in file are considered relative to the root directory.
@@ -58,7 +58,7 @@ file = AUTOGEN
 outfolder = ./env-test/builds/
 # An output file that will contain all the output information consolidated.
 output = ./env-test/project_details.json
-# The root of the java repository
+# The root of the jar collection repository
 jars =./env-test/jars
 # The file that represents the mapping of fqn to jar in repository.
 fqn_to_jar = ./env-test/fqn-to-jars.shelve
