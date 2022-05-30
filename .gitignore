@@ -2,6 +2,9 @@
 *.log
 save_*
 builds/*
+env-test/builds/*
+env-test/*.json
+env-test/*.shelve
 TBUILD/*
 Uncompress*
 jars/*
