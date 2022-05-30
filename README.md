@@ -11,7 +11,7 @@ fixes errors and resolves external dependencies.
 ### Environment Setup & Requirements
 
 - Java Version: JDK-8+ [Preferable Latest Java [OpenJDK17](https://openjdk.java.net/projects/jdk/17/)]
-- Ant Version: any that uses ``javac`` from JDK-8+ [Ant](https://ant.apache.org/manual/install.html)
+- Ant Version: Ant 1.10 works with ``javac`` from JDK-8+ [Ant](https://ant.apache.org/manual/install.html)
 - Python Version: 3.9+
 - JBF uses three python packages [subprocess32](https://pypi.org/project/subprocess32/), [chardet](https://pypi.org/project/chardet/) and [simplejson](https://pypi.org/project/simplejson/). The following python packages are
   required to install before running JBF:
@@ -22,7 +22,7 @@ pip install chardet
 pip install simplejson
 ```
 
-### SourcererJBF Directories and Files Structure
+### Directories and Files Structure
 
 ```
 📦 SourcererJBF
@@ -38,13 +38,14 @@ pip install simplejson
    📜 README.md              // JBF documentation
 ```
 
-### Run JBF With Configuration File
-JBF can be run in two-way. The easiest option is to edit the config file and execute the ``jbf-config-compile.py`` script.
-To do that, first edit the ``jbf.config`` configuration file with all the required values and paths.
-The file is self-explanatory and just need to updated according to host machine physical paths.
+### Executing JBF
+JBF can be run with a configuration file or with the command line arguments
+
+- #### Run JBF With Configuration File
+The easiest option is to edit the ``jbf.config`` configuration file and execute the ``jbf-config-compile.py`` script.
+The file is self-explanatory, and it just requires to updated according to host machine physical paths.
 
 - #### ``jbf.config``
-
 ``` yml
 [DEFAULT]
 # The directory under which all the java projects to be compiled exist.
@@ -72,15 +73,10 @@ only_project_build = False
 python3 jbf-config-compile.py
 ```
 - #### Run JBF With Command Line Arguments
-If you prefer to run JBF with command line arguments the use the following command and pass the required arguments as
-shown in the following.
-
+If you prefer to run JBF with command line arguments, you can get the details of these arguments with help option.
 ```bash
-python3 jbf-cmd-compile.py [-h] [-r ROOT] [-b] [-f FILE] [-d OUTFOLDER] [-o OUTPUT]
-[-j JARS] [-ftj FQN_TO_JAR] [-t THREADS]
-
+python3 jbf-cmd-compile.py -h
 ```
-- #### jbf-cmd-compile.py -h
 ```bash
 usage: jbf-cmd-compile.py [-h] [-r ROOT] [-b] [-f FILE] [-d OUTFOLDER] [-o OUTPUT] [-j JARS] [-ftj FQN_TO_JAR] [-t THREADS] [-tpb] [-v] [-opb]
 
@@ -106,7 +102,12 @@ optional arguments:
                         Only use project build files.
 ```
 
-### Details of The Test Environment and JBF Generated Directories, Files 
+```bash
+python3 jbf-cmd-compile.py [-h] [-r ROOT] [-b] [-f FILE] [-d OUTFOLDER] [-o OUTPUT]
+[-j JARS] [-ftj FQN_TO_JAR] [-t THREADS]
+```
+
+### The Test Environment and JBF Generated Directories, Files 
 ```
 📦 SourcererJBF
   ┣ 📂 env-test                       // Resource for test the JBF workflow
