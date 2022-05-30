@@ -3,8 +3,7 @@
 SourcererJBF or JBF is a build framework that is capable of building thousand of Java projects at scale.
 JBF first takes a vast collection of Java projects as input and scrapes all the required external dependencies from
 those projects or the web. Then it indexes these dependencies and compiles the projects in multiple stages. During the
-compilation, JBF
-fixes errors and resolves external dependencies.
+compilation, JBF fixes errors and resolves external dependencies. With JBF, we successfully compiled [91,076 Java projects](https://jbf-with-jgigantic.web.app/jgigantic.html) from a collection of 299,142 projects downloaded from GitHubs. All the artifacts of JBF build is provided [here](https://jbf-with-jgigantic.web.app/).
 
 <img src="doc/jbf-overview.png" alt="JBF High Level Architecture"/>
 
