@@ -140,3 +140,9 @@ https://user-images.githubusercontent.com/6449333/170950780-6e1f03a2-832f-416e-a
 We also designed a Build as a Service (BaaS) platfrom based on the JBF. BaaS can instantly build a Java project hosted on GitHub.
 To learn more about it, please check out this repository [BaaS](https://github.com/Mondego/baas).
 
+
+### Contact
+If you have any questions or find any issues, please contact at [mdrh@uci.edu](mdrh@uci.edu)
+
+## License
+This repository is licensed under [GNU General Public License v3.0](LICENSE)
