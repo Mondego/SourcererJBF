@@ -43,7 +43,7 @@ JBF can be run with a configuration file or with the command line arguments
 
 - #### Run JBF With Configuration File
 The easiest option is to edit the ``jbf.config`` configuration file and execute the ``jbf-config-compile.py`` script.
-The file is self-explanatory, and it just requires to updated according to host machine physical paths.
+The file is self-explanatory, and it just requires to update according to host machine physical paths.
 
 - #### ``jbf.config``
 ``` yml
