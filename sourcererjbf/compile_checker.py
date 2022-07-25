@@ -339,8 +339,10 @@ def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
     if succ:
         build_files_path = os.path.join(outdir, project["file"], "build")
         check_output(["mkdir", "-p", build_files_path], encoding='utf8')
+        check_output(["chmod", "777", build_files_path], encoding='utf8')
         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
-        unzip(project_zip_path, output_project_path)
+        # did not copy the source for now
+        # unzip(project_zip_path, output_project_path)
         CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
         UpdateBuildFiles(project, output_project_path)
 
@@ -353,6 +355,7 @@ def SaveOutput(save, project, succ, output, outdir, command):
     project_path = os.path.join(outdir, project["file"])
     if not os.path.exists(project_path):
         check_output(["mkdir", "-p", project_path], encoding='utf8')
+        check_output(["chmod", "777", project_path], encoding='utf8')
     json.dump(project, open(os.path.join(project_path, "build-result.json"), "w"), sort_keys=True, indent=4,
               separators=(",", ": "))
     open(os.path.join(project_path, "build.command"), "w").write(command)
