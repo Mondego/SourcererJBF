@@ -339,12 +339,13 @@ def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
     if succ:
         build_files_path = os.path.join(outdir, project["file"], "build")
         check_output(["mkdir", "-p", build_files_path], encoding='utf8')
-        check_output(["chmod", "777", build_files_path], encoding='utf8')
+        #check_output(["chmod", "777", build_files_path], encoding='utf8')
         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
+        UpdateBuildFiles(project, output_project_path)
         # did not copy the source for now
         # unzip(project_zip_path, output_project_path)
-        # CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
-        UpdateBuildFiles(project, output_project_path)
+        #CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
+
 
     # for (filename, content) in buildfiles:
     #     open(os.path.join(output_project_path, filename), "w").write(content)
