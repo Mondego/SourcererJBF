@@ -343,7 +343,7 @@ def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
         # did not copy the source for now
         # unzip(project_zip_path, output_project_path)
-        CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
+        # CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
         UpdateBuildFiles(project, output_project_path)
 
     # for (filename, content) in buildfiles:
