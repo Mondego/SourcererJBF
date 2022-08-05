@@ -7,8 +7,19 @@ compilation, JBF fixes errors and resolves external dependencies. With JBF, we s
 
 <img src="doc/jbf-overview.png" alt="JBF High Level Architecture"/>
 
+## JBF Featuers
+1. **Scalable:**  JBF is a scalable build framework that can build thousands of projects at a scale. In our experiment, we executed JBF on a collection of 299,142 Java projects downloaded from GitHub. JBF attempted to compile all of these projects and built [91,076 projects (30.44\%) successfully](https://jbf-with-jgigantic.web.app/jgigantic.html), which substantiates JBF's scalability.
 
-### Environment Setup & Requirements
+2. **Accurate:** The JBF-generated build result is as accurate as the project's existing build system compiled output. In our experiment, we determined in total 24,526 projects built by both JBF and the project's own build script with the numbers of Maven (18,852), Gradle(2,047), and Ant (3,357) projects, respectively. We compared the JBF-produced output (class files checksum value) with the project's built-system output for all these projects. We examined that JBF got 100\% build accuracy with the same number of class files and the exact checksum values.  
+
+3. **Configurable:** JBF is fully configurable for different types of usage patterns. For instance, researchers can configure JBF to run  *(i) Only JBF build*, *(ii) Only project own build script*, *(iii) Try own project build first, then try JBF*. In addition to that, researchers can specify the number of threads for enabling multiple processing, load preconstructed FQN index, and set the desired output format and locations.
+
+4. **Controlled Build:** JBF's one of the core features is its predictable behaviors and user-controlled. JBF stores the output of the project compilation (both *Complete* and *Incomplete Build*) in a predefined structure and location. Researchers can control the environment and have the output in a specific destination without paying the effort of exploring different types of project-specific output folders and artifacts.
+
+5. **Normalized Build:** JBF produced a normalized built script for each successfully compiled project containing class files( bytecode) and packaged all required dependencies to recompile the project. The motivation behind the normalized build scripts is that the build script structure and type remain the same in all compiled projects. Researchers do not need project-specific knowledge to treat each project individually, and they can automate the execution of the normalized build script to recompile all projects.
+
+
+## Environment Setup & Requirements
 
 - Java Version: JDK-8+ [Preferable Latest Java [OpenJDK17](https://openjdk.java.net/projects/jdk/17/)]
 - Ant Version: Ant 1.10 works with ``javac`` from JDK-8+ [Ant](https://ant.apache.org/manual/install.html)
@@ -22,7 +33,7 @@ pip install chardet
 pip install simplejson
 ```
 
-### Directories and Files Structure
+## Directories and Files Structure
 
 ```
 📦 SourcererJBF
@@ -38,7 +49,7 @@ pip install simplejson
    📜 README.md              // JBF documentation
 ```
 
-### Executing JBF
+## Executing JBF
 JBF can be run with a configuration file or with the command line arguments
 
 - #### Run JBF With Configuration File
@@ -107,7 +118,7 @@ python3 jbf-cmd-compile.py [-h] [-r ROOT] [-b] [-f FILE] [-d OUTFOLDER] [-o OUTP
 [-j JARS] [-ftj FQN_TO_JAR] [-t THREADS]
 ```
 
-### The Test Environment and JBF Generated Directories, Files 
+## The Test Environment and JBF Generated Directories, Files 
 ```
 📦 SourcererJBF
   ┣ 📂 env-test                       // Resource for test the JBF workflow
@@ -123,20 +134,26 @@ python3 jbf-cmd-compile.py [-h] [-r ROOT] [-b] [-f FILE] [-d OUTFOLDER] [-o OUTP
   📜 badjars_*               // (Will appear after JBF execution) JBF genetered temporary list of invalid jars files
 ```
 
-#### Note:
+## Note:
 Please delete all these generated files & folders before each new execution of JBF.
 ```bash
 ./clean-up.sh
 ```
 
 
-### JBF Works in Action
+## JBF Works in Action
 
 https://user-images.githubusercontent.com/6449333/170950780-6e1f03a2-832f-416e-a531-92da32c6a33b.mp4
 
 
 
-### Build as a Service (BaaS)
+## Build as a Service (BaaS)
 We also designed a Build as a Service (BaaS) platfrom based on the JBF. BaaS can instantly build a Java project hosted on GitHub.
 To learn more about it, please check out this repository [BaaS](https://github.com/Mondego/baas).
 
+
+## Contact
+If you have any questions or find any issues, please contact at [mdrh@uci.edu](mailto:mdrh@uci.edu)
+
+## License
+This repository is licensed under [GNU General Public License v3.0](LICENSE)
