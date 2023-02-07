@@ -48,7 +48,7 @@ if __name__ == "__main__":
     root = config.get('DEFAULT', 'root')
     rebuild_from_scratch = config.getboolean('DEFAULT', 'rebuild_from_scratch')
     file = config.get('DEFAULT', 'file')
-    outfolder = config.get('DEFAULT', 'outfolder')
+    output_folder = config.get('DEFAULT', 'output_folder')
     output = config.get('DEFAULT', 'output')
     jars = config.get('DEFAULT', 'jars')
     fqn_to_jar = config.get('DEFAULT', 'fqn_to_jar')
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     verbose = config.getboolean('DEFAULT', 'verbose')
     only_project_build = config.getboolean('DEFAULT', 'only_project_build')
 
-    root, infile, outdir, outfile, cc.THREADCOUNT = root, file, outfolder, output, threads
+    root, infile, outdir, outfile, cc.THREADCOUNT = root, file, output_folder, output, threads
     cc.JAR_REPO = jars
     cc.VERBOSE = verbose
 

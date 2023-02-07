@@ -10,6 +10,7 @@ from .fqn_to_jar_map_generator import get_locations_from_folder, search_and_save
 
 FQN_TO_JAR_MAP = {}
 FOLDER_PATH = ""
+PROJECT_TO_JAR_MAP = {}
 
 
 # KNOWN_JARS = json.load(open("known_jars.json"))
@@ -20,14 +21,25 @@ def load_fqns(folderpath, filename, threads):
     load_or_create(folderpath, filename, threads)
 
 
+def get_project_jar_map():
+    config = configparser.ConfigParser()
+    config.read('jbf.config')
+    fqn_to_jar_map_file = config.get('DEFAULT', 'project_to_jars')
+    return shelve.open(fqn_to_jar_map_file, 'r')
+
+
 def get_fqn_jar_map():
     config = configparser.ConfigParser()
     config.read('jbf.config')
     fqn_to_jar_map_file = config.get('DEFAULT', 'fqn_to_jar')
     return shelve.open(fqn_to_jar_map_file, 'r')
-    # thread = config.getint('DEFAULT', 'threads')
-    # jar_repo_path = config.get('DEFAULT', 'jars')
-    # return load_or_create(jar_repo_path, fqn_to_jar_map_file, thread)
+
+
+def get_project_version_jar_map():
+    config = configparser.ConfigParser()
+    config.read('jbf.config')
+    project_to_jar_map_file = config.get('DEFAULT', 'project_to_jars')
+    return shelve.open(project_to_jar_map_file, 'r')
 
 
 def load_or_create(folderpath, filename, threads):
@@ -40,25 +52,35 @@ def load_or_create(folderpath, filename, threads):
     return shelve.open(filename)
 
 
-def find_depends(packages, fqn_map, debug=False):
+def get_jar_versions(project_key):
+    global PROJECT_TO_JAR_MAP
+    PROJECT_TO_JAR_MAP = get_project_version_jar_map()
+    if project_key in PROJECT_TO_JAR_MAP:
+        return PROJECT_TO_JAR_MAP[project_key]['dependencies']
+    return []
+
+
+def find_depends(packages, fqn_map, project, debug=False):  # need project in the parameter
     if debug: print("Fqnmap length:", len(fqn_map))
     if len(packages) == 0:
         return True, []
+        # return a list of jars specific to projects
     jar_to_fqn = {}
     for package in packages:
         if package not in fqn_map:
             # print "Did not find", package, len(fqn_map)
             return False, []
-        for jar in fqn_map[package]:
+        fqn_jars = fqn_map[package]  # return list of jars specific to fqn
+        for jar in fqn_jars:
             jar_to_fqn.setdefault(jar, set()).add(package)
     item = sorted(jar_to_fqn.items(), key=lambda x: len(x[1]), reverse=True)[0][0]
-    succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map, debug=debug)
+    succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map, project, debug=debug)
     return succ, [item] + remaining
 
 
 def create_jar_depends(depends, local=list()):
-    return ([(None, None, None, False, copy_and_retrieve_path(depend), True) for depend in local]
-            + [(None, None, None, False, copy_and_retrieve_path(depend), False) for depend in depends])
+    return ([(None, None, None, False, copy_and_retrieve_path(depend), True) for depend in set(local)]
+            + [(None, None, None, False, copy_and_retrieve_path(depend), False) for depend in set(depends)])
 
 
 def FixDeps(threadid, packages, project):
@@ -72,7 +94,9 @@ def FixDeps(threadid, packages, project):
         project["packages_not_in_fqnmap"] = not_present
         return False, project
 
-    succ, depends = find_depends(set(packages), FQN_TO_JAR_MAP)
+    succ, depends = find_depends(set(packages), FQN_TO_JAR_MAP, project)
+    project_jar_versions = get_jar_versions(project['file'])
+    depends.extend(project_jar_versions)
     if not succ:
         return False, project
 
@@ -84,10 +108,7 @@ def FixDeps(threadid, packages, project):
 
 def FixDepsWithOwnJars(threadid, packages, project):
     global FQN_TO_JAR_MAP
-    # if not bool(FQN_TO_JAR_MAP):
-    #    FQN_TO_JAR_MAP = get_fqn_jar_map()
     FQN_TO_JAR_MAP = get_fqn_jar_map()
-    # print("Index Size =" + str(len(FQN_TO_JAR_MAP)))
     local_fqn_map = find_and_scrape_jars(threadid, project)
     not_present_locally = [pkg for pkg in set(packages) if pkg not in local_fqn_map]
     remaining = set()
@@ -99,12 +120,14 @@ def FixDepsWithOwnJars(threadid, packages, project):
             project["packages_not_in_fqnmap"] = not_present
             FQN_TO_JAR_MAP.close()
             return False, project
-    succ, depends_local = find_depends(set(packages) - set(remaining), local_fqn_map)
+    succ, depends_local = find_depends(set(packages) - set(remaining), local_fqn_map, project)
     if len(remaining) > 0:
-        succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP)
+        succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, project)
+        project_jar_versions = get_jar_versions(project['file'])
+        depends.extend(project_jar_versions)
     if not succ:
         # print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
-        succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, debug=True)
+        succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, project, debug=True)
         FQN_TO_JAR_MAP.close()
         return False, project
 
