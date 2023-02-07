@@ -6,7 +6,7 @@ those projects or the web. Then it indexes these dependencies and compiles the p
 compilation, JBF fixes errors and resolves external dependencies. With JBF, we successfully compiled [117K Java projects](https://mondego.ics.uci.edu/projects/SourcererJBF/jaigantic.html) from a collection of 287K projects downloaded from GitHubs. 
 All the artifacts of JBF is provided [here](https://mondego.ics.uci.edu/projects/SourcererJBF/).
 
-<img src="doc/jbf-overview.png" alt="JBF High Level Architecture"/>
+<img src="doc/jbf-overview-pic.png" alt="JBF High Level Architecture"/>
 
 ## JBF Features
 1. **Normalized Build:** JBF produced a normalized built script for each successfully compiled project containing class files( bytecode) and packaged all required dependencies to recompile the project. The motivation behind the normalized build scripts is that the build script structure and type remain the same in all compiled projects. Researchers do not need project-specific knowledge to treat each project individually, and they can automate the execution of the normalized build script to recompile all projects.
