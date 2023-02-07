@@ -4,7 +4,7 @@
 # and figures out FQNs that exist in them
 #
 # Usage: ./compile_checker.py -r <Root Directory>
-
+import configparser
 import os, zipfile, shelve, shutil, sys, re, argparse, time, datetime
 from pathlib import Path
 
@@ -164,7 +164,7 @@ def unzip(zipFilePath, destDir):
         zip_ref = zipfile.ZipFile(zipFilePath, 'r')
         zip_ref.extractall(destDir)
         zip_ref.close()
-        # print( "Success ", zipFilePath, destDir)
+        # print "Success ", zipFilePath, destDir
     except Exception as e:
         pass
 
@@ -267,24 +267,8 @@ def CopyTarget(projectpath, threadid):
     check_output(["chmod", "-R", "+w", TEMPDIR.format(threadid)], encoding='utf8')
 
 
-# def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
-#     if succ:
-#         dstpath = os.path.join(outdir, project["file"], "build")
-#     dstpath2 = os.path.join(outdir, project["file"], "custom_build_script")
-#
-#     if succ:
-#         check_output(["mkdir", "-p", dstpath], encoding='utf8')
-#     check_output(["mkdir", "-p", dstpath2], encoding='utf8')
-#
-#     if succ:
-#         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), dstpath)
-#     for (filename, content) in buildfiles:
-#         open(os.path.join(dstpath2, filename), "w").write(content)
-
-
 def CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ):
     dependents_jars_path = os.path.join(outdir, project["file"], "depends")
-    check_output(["mkdir", "-p", dependents_jars_path], encoding='utf8')
     if "depends" in project:
         list_of_jars = project["depends"]
         for jar in list_of_jars:
@@ -298,27 +282,19 @@ def CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ):
                     check_output(["cp", merged_path, dependents_jars_path], encoding='utf8')
 
 
-def UpdateBuildFiles(project, output_project_path):
+def UpdateBuildFiles(outdir, project, output_project_path):
+    dependents_jars_path = os.path.join(outdir, project["file"], "depends")
+    check_output(["mkdir", "-p", dependents_jars_path], encoding='utf8')
     classpath = ""
     mavenline = ""
     if "depends" in project:
         depends = set([(a, b, c, d, e, f) for a, b, c, d, e, f in project["depends"]])
-        mavendepends = set([d for d in depends if d[3]])
-        mavenline = "\n  ".join([d[4] for d in mavendepends])
-        jardepends = depends - mavendepends
-
-        # ecoding won't work as d coming as a string not byte
-        # jarline = "\n        ".join(["<pathelement path=\"{0}\" />".format(os.path.join("../.." ,JAR_REPO, d[4].encode("utf-8", "xmlcharrefreplace")) if not d[5] else d[4].encode("utf-8", "xmlcharrefreplace")) for d in jardepends])
         jarline = "\n        ".join(
-            ["<pathelement path=\"{0}\" />".format(
-                os.path.join("/", JAR_REPO, d[4]) if not d[5] else "depends/" + Path(d[4]).name) for d in
-                jardepends])
+            ["<pathelement path=\"{0}\" />".format("depends/" + Path(d[4]).name) for d in
+             depends])
 
-        if jarline or mavenline:
-            if mavenline:
-                classpath += "\n      <classpath refid=\"default.classpath\" />"
-            if jarline:
-                classpath = "\n      <classpath>\n        " + jarline + "\n      </classpath>"
+        if jarline:
+            classpath = "\n      <classpath>\n        " + jarline + "\n      </classpath>"
 
     desc = project["description"] if "description" in project else ""
     ivyfile = open("xml-templates/ivy-template.xml", "r").read().format(
@@ -336,19 +312,19 @@ def UpdateBuildFiles(project, output_project_path):
 def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
     project_zip_path = project['path']
     output_project_path = os.path.join(outdir, project["file"])
+    config = configparser.ConfigParser()
+    config.read('jbf.config')
+    copy_source = config.getboolean('DEFAULT', 'copy_source')
+    copy_jars = config.getboolean('DEFAULT', 'copy_jars')
     if succ:
         build_files_path = os.path.join(outdir, project["file"], "build")
         check_output(["mkdir", "-p", build_files_path], encoding='utf8')
-        #check_output(["chmod", "777", build_files_path], encoding='utf8')
         copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
-        UpdateBuildFiles(project, output_project_path)
-        # did not copy the source for now
-        # unzip(project_zip_path, output_project_path)
-        #CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
-
-
-    # for (filename, content) in buildfiles:
-    #     open(os.path.join(output_project_path, filename), "w").write(content)
+        UpdateBuildFiles(outdir, project, output_project_path)
+        if copy_source:
+            check_output(["cp", project_zip_path, output_project_path], encoding='utf8')
+        if copy_jars:
+            CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
 
 
 def SaveOutput(save, project, succ, output, outdir, command):
@@ -356,7 +332,6 @@ def SaveOutput(save, project, succ, output, outdir, command):
     project_path = os.path.join(outdir, project["file"])
     if not os.path.exists(project_path):
         check_output(["mkdir", "-p", project_path], encoding='utf8')
-        check_output(["chmod", "777", project_path], encoding='utf8')
     json.dump(project, open(os.path.join(project_path, "build-result.json"), "w"), sort_keys=True, indent=4,
               separators=(",", ": "))
     open(os.path.join(project_path, "build.command"), "w").write(command)
@@ -407,6 +382,15 @@ def Uncompress(comp_path, threadid):
     return path
 
 
+def make_tarball(project, outdir):
+    ## archive the folder
+    # tar -czvf file.tar.gz directory
+    output_project_dir = os.path.join(outdir, project["file"])
+    output_tar_file_path = "file.tar.gz"
+    check_output(["tar", "-czvf", output_tar_file_path, output_project_dir], encoding='utf8')
+    ## delete the directory
+
+
 def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
     save = shelve.open(PARTMAP.format(threadid))
     # projects = RemoveTouched(save, projects)
@@ -452,10 +436,12 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
         project["timing"].append(("end_all_compile", time.time()))
         # print succ, project["file"]
         # print "command: ", command
+
         CopyBuildFiles(project, threadid, outdir, buildfs, succ)
         project["timing"].append(("end_copy_class_files", time.time()))
         SaveOutput(save, project, succ, output, outdir, command)
         project["timing"].append(("end_save_json", time.time()))
+        # make_tarball(project, outdir)
         reportq.put(succ)
         # i+=1
         # if i % 10 == 0:
@@ -465,6 +451,7 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
 
 
 #  CleanFolder(threadid)
+
 
 def ConsolidateOutput():
     reduced = {}
@@ -492,7 +479,7 @@ def ConsolidateOutput():
                         continue
 
         final[key] = data
-    print("Writing Output JSON")
+    print("Writing json")
     return final
 
 
@@ -516,7 +503,7 @@ def progressbar(recordq, total):
     succ = 0
     fail = 0
     start_t = time.time()
-    progress(0, 0, 0, total, suffix="Initializing Threads")
+    progress(0, 0, 0, total, suffix="Initalizing Threads")
     item = recordq.get()
     while item != "DONE":
         count += 1
@@ -555,7 +542,7 @@ def main(root, projects, outdir, methods, ):
         processes[i].join()
     recordq.put("DONE")
     time.sleep(1)
-    print("Done With All Threads")
+    print("Done with all threads.")
     return ConsolidateOutput()
 
 

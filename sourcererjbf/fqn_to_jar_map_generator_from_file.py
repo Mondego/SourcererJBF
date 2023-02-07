@@ -11,7 +11,7 @@ from subprocess import check_output, run, call, CalledProcessError, STDOUT, PIPE
 from utility import create_logger
 from zipfile import ZipFile
 
-NUMBER_OF_THREADS = 20
+NUMBER_OF_THREADS = 30
 logger = create_logger("fqn_to_jar")
 ROOT = ""
 
@@ -86,8 +86,7 @@ def make_fqn_part(locations, threadid):
             logger.error(path + "error" + str(e))
         count += 1
         if count % 100 == 0:
-            print
-            "Thread " + str(threadid) + ": " + str(count) + "/" + str(total)
+            print("Thread " + str(threadid) + ": " + str(count) + "/" + str(total))
 
 
 def reducequeue():
@@ -126,7 +125,7 @@ def save_to_shelve(savefile, fqn_map):
     for fqn in fqn_map:
         try:
             sh[str(fqn)] = fqn_map[fqn]
-            print(sh[str(fqn)])
+            print(str(fqn))
             sh.sync()
         except Exception as e:
             print("Exception (probably decoding) when writing out fqn: ", fqn, e)
