@@ -17,7 +17,7 @@ from sourcererjbf import output_analyzer, encode_fixer, dependency_matcher
 
 from .constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
 
-THREADCOUNT = 50
+THREADCOUNT = 32
 PATH_logs = "logs"
 JAR_REPO = ""
 VERBOSE = False
@@ -43,14 +43,17 @@ def OwnBuild(project, threadid, output):
     # project["create_build"] = False
     try:
         srcdir = TEMPDIR.format(threadid)
-        ant_find = check_output(["find", srcdir, "-name", "build.xml"], encoding='utf8')
-        if ant_find != "":
-            project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
+        # precedence order of Gradle ⇒ Maven ⇒ Ant.
+        # try gradle
+        gradle_find = check_output(["find", srcdir, "-name", "build.gradle"], encoding='utf8')
+        if gradle_find != "":
+            project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
             project["has_own_build"] = True
             project["create_build"] = False
-            # print "ANT: ", project["path"]
+            # print "Gradle: ", project["path"]
             return True, output, project
 
+        # try maven
         mvn_find = check_output(["find", srcdir, "-name", "pom.xml"], encoding='utf8')
         if mvn_find != "":
             project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
@@ -59,12 +62,13 @@ def OwnBuild(project, threadid, output):
             # print "MVN: ", project["path"]
             return True, output, project
 
-        gradle_find = check_output(["find", srcdir, "-name", "build.gradle"], encoding='utf8')
-        if gradle_find != "":
-            project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
+        # try ant
+        ant_find = check_output(["find", srcdir, "-name", "build.xml"], encoding='utf8')
+        if ant_find != "":
+            project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
             project["has_own_build"] = True
             project["create_build"] = False
-            # print "Gradle: ", project["path"]
+            # print "ANT: ", project["path"]
             return True, output, project
 
     except CalledProcessError:
@@ -521,7 +525,7 @@ def progressbar(recordq, total):
     print("\n")
 
 
-def main(root, projects, outdir, methods, ):
+def main(root, projects, outdir, methods):
     processes = []
     p = Queue()
     recordq = Queue()
