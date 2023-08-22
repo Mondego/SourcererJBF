@@ -11,11 +11,12 @@ from pathlib import Path
 import simplejson as json
 from multiprocessing import Process, Lock, Queue
 from threading import Thread
-from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired
+from subprocess import check_output, call, CalledProcessError, STDOUT, Popen, PIPE, TimeoutExpired, run
 
 from sourcererjbf import output_analyzer, encode_fixer, dependency_matcher
 
 from .constants import PARTMAP, TEMPDIR, TIMEOUT_SECONDS, bcolors
+from .utility import getHash_for_class_files
 
 THREADCOUNT = 32
 PATH_logs = "logs"
@@ -50,6 +51,7 @@ def OwnBuild(project, threadid, output):
             project["use_command"] = ["gradle", "-b", gradle_find.split("\n")[0].strip(), "compileJava"]
             project["has_own_build"] = True
             project["create_build"] = False
+            project["existing_build_type"] = "gradle"
             # print "Gradle: ", project["path"]
             return True, output, project
 
@@ -59,6 +61,7 @@ def OwnBuild(project, threadid, output):
             project["use_command"] = ["mvn", "-f", mvn_find.split("\n")[0].strip(), "compile"]
             project["has_own_build"] = True
             project["create_build"] = False
+            project["existing_build_type"] = "maven"
             # print "MVN: ", project["path"]
             return True, output, project
 
@@ -68,6 +71,7 @@ def OwnBuild(project, threadid, output):
             project["use_command"] = ["ant", "-f", ant_find.split("\n")[0].strip()]
             project["has_own_build"] = True
             project["create_build"] = False
+            project["existing_build_type"] = "ant"
             # print "ANT: ", project["path"]
             return True, output, project
 
@@ -161,6 +165,12 @@ def copyrecursively(source_folder, destination_folder):
             if not os.path.exists(dst_path):
                 os.mkdir(dst_path)
     # print "Hi Im leaving"
+
+
+def get_class_file_hashes(source_folder):
+    found_classes = run(["find", source_folder, "-name", "*.class"], encoding='utf8', check=True,
+                        stdout=PIPE).stdout.strip().split("\n")
+    return getHash_for_class_files(found_classes)
 
 
 def unzip(zipFilePath, destDir):
@@ -323,12 +333,18 @@ def CopyBuildFiles(project, threadid, outdir, buildfiles, succ):
     if succ:
         build_files_path = os.path.join(outdir, project["file"], "build")
         check_output(["mkdir", "-p", build_files_path], encoding='utf8')
-        copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
-        UpdateBuildFiles(outdir, project, output_project_path)
-        if copy_source:
-            check_output(["cp", project_zip_path, output_project_path], encoding='utf8')
-        if copy_jars:
-            CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
+        # copy for own build success
+        # if project['has_own_build']
+        project['bytecode_hash'] = get_class_file_hashes(os.path.join(TEMPDIR.format(threadid)))
+        only_project_build = config.getboolean('DEFAULT', 'only_project_build')
+        if not only_project_build:
+            # copy for JBF build success
+            copyrecursively(os.path.join(TEMPDIR.format(threadid), "build"), build_files_path)
+            UpdateBuildFiles(outdir, project, output_project_path)
+            if copy_source:
+                check_output(["cp", project_zip_path, output_project_path], encoding='utf8')
+            if copy_jars:
+                CopyDependentJarFilesToOutputFolder(project, threadid, outdir, succ)
 
 
 def SaveOutput(save, project, succ, output, outdir, command):
@@ -440,8 +456,9 @@ def CompileAndSave(threadid, projects, methods, root, outdir, reportq):
         project["timing"].append(("end_all_compile", time.time()))
         # print succ, project["file"]
         # print "command: ", command
-
+        # project["build_method"] ->"project_build_file",
         CopyBuildFiles(project, threadid, outdir, buildfs, succ)
+
         project["timing"].append(("end_copy_class_files", time.time()))
         SaveOutput(save, project, succ, output, outdir, command)
         project["timing"].append(("end_save_json", time.time()))
