@@ -65,14 +65,22 @@ def find_depends(packages, fqn_map, project, debug=False):  # need project in th
     if len(packages) == 0:
         return True, []
         # return a list of jars specific to projects
+    project_to_jars = set(get_jar_versions(project['file']))  # return jars from project==> jars map
     jar_to_fqn = {}
     for package in packages:
         if package not in fqn_map:
             # print "Did not find", package, len(fqn_map)
             return False, []
-        fqn_jars = fqn_map[package]  # return list of jars specific to fqn
-        for jar in fqn_jars:
-            jar_to_fqn.setdefault(jar, set()).add(package)
+        fqn_jars = set(fqn_map[package])  # return list of jars specific to fqn
+        common_jars = project_to_jars.intersection(fqn_jars)
+        if len(common_jars) > 0:
+            # for this package(fqn) take the jars that are found in project_to_jars map
+            for jar in common_jars:
+                jar_to_fqn.setdefault(jar, set()).add(package)
+        else:
+            for jar in fqn_jars:
+                jar_to_fqn.setdefault(jar, set()).add(package)
+
     item = sorted(jar_to_fqn.items(), key=lambda x: len(x[1]), reverse=True)[0][0]
     succ, remaining = find_depends(packages - jar_to_fqn[item], fqn_map, project, debug=debug)
     return succ, [item] + remaining
@@ -95,8 +103,9 @@ def FixDeps(threadid, packages, project):
         return False, project
 
     succ, depends = find_depends(set(packages), FQN_TO_JAR_MAP, project)
-    project_jar_versions = get_jar_versions(project['file'])
-    depends.extend(project_jar_versions)
+    # project_jar_versions = get_jar_versions(project['file'])
+    # depends.extend(project_jar_versions)
+    depends = list(set(depends))
     if not succ:
         return False, project
 
@@ -125,6 +134,8 @@ def FixDepsWithOwnJars(threadid, packages, project):
         succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, project)
         project_jar_versions = get_jar_versions(project['file'])
         depends.extend(project_jar_versions)
+        # takes the uniques jars only
+        depends = list(set(depends))
     if not succ:
         # print "i'm here for some reason.", len(packages), len(remaining), len(not_present_locally), len(not_present), len(FQN_TO_JAR_MAP)
         succ, depends = find_depends(set(remaining), FQN_TO_JAR_MAP, project, debug=True)

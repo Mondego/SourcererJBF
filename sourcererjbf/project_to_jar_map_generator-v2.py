@@ -123,7 +123,7 @@ def find_all_pom_files(folder):
 
 def read_and_remove_jar_list(list_path):
     try:
-        with  open(list_path) as fp:
+        with open(list_path) as fp:
             contents = fp.read()
             path_list = contents.split(':')
             remove_file(list_path)
