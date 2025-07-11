@@ -145,10 +145,26 @@ Please delete all these generated files & folders before each new execution of J
 ./clean-up.sh
 ```
 
-## Build as a Service (BaaS)
-We also designed a Build as a Service (BaaS) platfrom based on the JBF. BaaS can instantly build a Java project hosted on GitHub.
-To learn more about it, please check out this repository [BaaS](https://github.com/Mondego/baas).
+## Citation
+```bibtex
+@article{DBLP:journals/tosem/MisuAL24,
+  author       = {Md Rakib Hossain Misu and
+                  Rohan Achar and
+                  Cristina V. Lopes},
+  title        = {SourcererJBF: {A} Java Build Framework For Large-Scale Compilation},
+  journal      = {{ACM} Trans. Softw. Eng. Methodol.},
+  volume       = {33},
+  number       = {3},
+  pages        = {71:1--71:35},
+  year         = {2024},
+  url          = {https://doi.org/10.1145/3635710},
+  doi          = {10.1145/3635710},
+  timestamp    = {Sun, 19 Jan 2025 14:22:53 +0100},
+  biburl       = {https://dblp.org/rec/journals/tosem/MisuAL24.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
 
+```
 
 ## Contact
 If you have any questions or find any issues, please contact at [mdrh@uci.edu](mailto:mdrh@uci.edu)
